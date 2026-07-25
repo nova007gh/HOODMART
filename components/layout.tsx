@@ -155,16 +155,18 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           <p>Tel: 0244-6475-10 | www.emdulab.com | admin@emdulab.com</p>
         </footer>
       </main>
-      {/* Floating Nova AI button */}
-      <Link
-        href="/dashboard/assistant"
-        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40"
-      >
-        <div className="group flex items-center gap-2 pl-3 pr-4 py-2 gold-gradient rounded-full shadow-lg hover:shadow-yellow-500/30 transition-all hover:scale-105 active:scale-95">
-          <Brain className="h-4 w-4 text-black" />
-          <span className="text-xs font-bold text-black whitespace-nowrap">Kofi AI</span>
-        </div>
-      </Link>
+      {/* Floating Nova AI button — hidden on POS which has its own Sales AI */}
+      {pathname !== '/pos' && (
+        <Link
+          href="/dashboard/assistant"
+          className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40"
+        >
+          <div className="group flex items-center gap-2 pl-3 pr-4 py-2 gold-gradient rounded-full shadow-lg hover:shadow-yellow-500/30 transition-all hover:scale-105 active:scale-95">
+            <Brain className="h-4 w-4 text-black" />
+            <span className="text-xs font-bold text-black whitespace-nowrap">Kofi AI</span>
+          </div>
+        </Link>
+      )}
     </div>
   )
 }

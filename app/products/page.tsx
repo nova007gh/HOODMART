@@ -179,7 +179,7 @@ export default function ProductsPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by name, barcode, category or supplier..."
-                className="w-full pl-10"
+                className="w-full pl-10 bg-zinc-950 border border-zinc-800 text-white rounded-lg p-2 text-sm"
               />
             </div>
           </CardContent>
@@ -235,21 +235,21 @@ export default function ProductsPage() {
               <CardContent className="p-4 space-y-4">
                 <form onSubmit={submit} className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1"><label className="text-xs text-zinc-400">Product Name *</label><input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Name" /></div>
-                    <div className="space-y-1"><label className="text-xs text-zinc-400">Barcode</label><input value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} placeholder="Barcode / SKU" /></div>
-                    <div className="space-y-1"><label className="text-xs text-zinc-400">Selling Price *</label><input required type="number" step="0.01" min="0" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="0.00" /></div>
-                    <div className="space-y-1"><label className="text-xs text-zinc-400">Cost Price</label><input type="number" step="0.01" min="0" value={form.cost} onChange={(e) => setForm({ ...form, cost: e.target.value })} placeholder="0.00" /></div>
-                    <div className="space-y-1"><label className="text-xs text-zinc-400">Stock</label><input type="number" min="0" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} placeholder="0" /></div>
-                    <div className="space-y-1"><label className="text-xs text-zinc-400">Min Stock</label><input type="number" min="0" value={form.minStock} onChange={(e) => setForm({ ...form, minStock: e.target.value })} placeholder="0" /></div>
-                    <div className="space-y-1"><label className="text-xs text-zinc-400">Unit</label><input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} placeholder="pcs / kg / L" /></div>
-                    <div className="space-y-1"><label className="text-xs text-zinc-400">Category</label><input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="Category" /></div>
-                    <div className="space-y-1"><label className="text-xs text-zinc-400">Supplier</label><input value={form.supplier} onChange={(e) => setForm({ ...form, supplier: e.target.value })} placeholder="Supplier" /></div>
-                    <div className="space-y-1"><label className="text-xs text-zinc-400">Expiry Date</label><input type="date" value={form.expiryDate} onChange={(e) => setForm({ ...form, expiryDate: e.target.value })} /></div>
+                    <div className="space-y-1"><label className="text-xs text-zinc-400">Product Name *</label><input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Name" className="w-full bg-zinc-950 border border-zinc-800 text-white rounded p-2 text-sm" /></div>
+                    <div className="space-y-1"><label className="text-xs text-zinc-400">Barcode</label><input value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} placeholder="Barcode / SKU" className="w-full bg-zinc-950 border border-zinc-800 text-white rounded p-2 text-sm" /></div>
+                    <div className="space-y-1"><label className="text-xs text-zinc-400">Selling Price *</label><input required type="number" step="0.01" min="0" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="0.00" className="w-full bg-zinc-950 border border-zinc-800 text-white rounded p-2 text-sm" /></div>
+                    <div className="space-y-1"><label className="text-xs text-zinc-400">Cost Price</label><input type="number" step="0.01" min="0" value={form.cost} onChange={(e) => setForm({ ...form, cost: e.target.value })} placeholder="0.00" className="w-full bg-zinc-950 border border-zinc-800 text-white rounded p-2 text-sm" /></div>
+                    <div className="space-y-1"><label className="text-xs text-zinc-400">Stock</label><input type="number" min="0" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} placeholder="0" className="w-full bg-zinc-950 border border-zinc-800 text-white rounded p-2 text-sm" /></div>
+                    <div className="space-y-1"><label className="text-xs text-zinc-400">Min Stock</label><input type="number" min="0" value={form.minStock} onChange={(e) => setForm({ ...form, minStock: e.target.value })} placeholder="0" className="w-full bg-zinc-950 border border-zinc-800 text-white rounded p-2 text-sm" /></div>
+                    <div className="space-y-1"><label className="text-xs text-zinc-400">Unit</label><input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} placeholder="pcs / kg / L" className="w-full bg-zinc-950 border border-zinc-800 text-white rounded p-2 text-sm" /></div>
+                    <div className="space-y-1"><label className="text-xs text-zinc-400">Category</label><input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="Category" className="w-full bg-zinc-950 border border-zinc-800 text-white rounded p-2 text-sm" /></div>
+                    <div className="space-y-1"><label className="text-xs text-zinc-400">Supplier</label><input value={form.supplier} onChange={(e) => setForm({ ...form, supplier: e.target.value })} placeholder="Supplier" className="w-full bg-zinc-950 border border-zinc-800 text-white rounded p-2 text-sm" /></div>
+                    <div className="space-y-1"><label className="text-xs text-zinc-400">Expiry Date</label><input type="date" value={form.expiryDate} onChange={(e) => setForm({ ...form, expiryDate: e.target.value })} className="w-full bg-zinc-950 border border-zinc-800 text-white rounded p-2 text-sm" /></div>
                   </div>
 
                   <div className="space-y-1">
                     <label className="text-xs text-zinc-400">Description / Inspiration</label>
-                    <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Notes, inspiration, or product story..." rows={3} />
+                    <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Notes, inspiration, or product story..." rows={3} className="w-full bg-zinc-950 border border-zinc-800 text-white rounded p-2 text-sm" />
                   </div>
 
                   <div className="space-y-2">

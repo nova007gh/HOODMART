@@ -12,7 +12,7 @@ import { createUser, updateUser, deleteUser, getSession, isAdmin } from '@/lib/a
 import { Users, Search, User, Mail, Phone, Shield, Pencil, Trash2, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-const ROLES = ['cashier', 'inventory', 'manager', 'admin']
+const ROLES = ['salesgirl', 'cashier', 'inventory', 'manager', 'admin']
 const PERMISSIONS = [
   'manage_employees',
   'manage_products',

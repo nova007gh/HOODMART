@@ -15,7 +15,7 @@ export type AIPermission =
   | 'ai.export_results'
   | 'ai.execute_actions'
 
-const ROLE_PERMISSIONS: Record<User['role'], AIPermission[]> = {
+const ROLE_PERMISSIONS: Record<string, AIPermission[]> = {
   admin: [
     'ai.use',
     'ai.view_sales',
@@ -41,7 +41,15 @@ const ROLE_PERMISSIONS: Record<User['role'], AIPermission[]> = {
     'ai.view_customer_contact_details',
     'ai.view_staff',
   ],
-  cashier: [],
+  cashier: [
+    'ai.use',
+    'ai.view_sales',
+  ],
+  salesgirl: [
+    'ai.use',
+    'ai.view_sales',
+  ],
+  inventory: [],
 }
 
 export function getPermissions(role: User['role']): AIPermission[] {

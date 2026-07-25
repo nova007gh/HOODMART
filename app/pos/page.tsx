@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { store, Product, Discount, CartItem, computeTotals, money, Sale, Branch, formatDateTime } from '@/lib/store'
 import { getSession } from '@/lib/auth'
 import { Search, ShoppingCart, Plus, Minus, Trash2, CreditCard, Printer, X, Banknote, AlertTriangle, Image as ImageIcon, Calendar, Archive, FolderOpen, Building2, Mail } from 'lucide-react'
+import { POSAIAssistant } from '@/components/pos-ai-assistant'
 import toast from 'react-hot-toast'
 
 export default function POSPage() {
@@ -17,6 +18,7 @@ export default function POSPage() {
   const [cart, setCart] = useState<CartItem[]>([])
   const [search, setSearch] = useState('')
   const [discountId, setDiscountId] = useState('')
+  const [showCart, setShowCart] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
   const [newProduct, setNewProduct] = useState({ name: '', price: '', barcode: '' })
   const [receipt, setReceipt] = useState<Sale | null>(null)
@@ -200,37 +202,43 @@ export default function POSPage() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-white flex items-center justify-between">
                   <span>Products</span>
-                  <Button size="sm" onClick={() => setShowAdd(!showAdd)} className="gold-gradient text-black">
-                    {showAdd ? 'Cancel' : '+ Add Product'}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="outline" onClick={() => setShowCart(true)} className="lg:hidden border-zinc-700 text-zinc-300 relative">
+                      <ShoppingCart className="h-4 w-4" />
+                      {cart.length > 0 && <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-yellow-500 text-black text-[10px] flex items-center justify-center font-bold">{cart.length}</span>}
+                    </Button>
+                    <Button size="sm" onClick={() => setShowAdd(!showAdd)} className="gold-gradient text-black">
+                      {showAdd ? 'Cancel' : '+ Add'}
+                    </Button>
+                  </div>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {showAdd && (
                   <form onSubmit={saveNewProduct} className="grid grid-cols-1 sm:grid-cols-4 gap-2">
-                    <input value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} placeholder="Name" required />
-                    <input value={newProduct.price} onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })} placeholder="Price" type="number" step="0.01" min="0" required />
-                    <input value={newProduct.barcode} onChange={(e) => setNewProduct({ ...newProduct, barcode: e.target.value })} placeholder="Barcode" />
+                    <input value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} placeholder="Name" required className="bg-zinc-950 border border-zinc-800 text-white rounded p-2 text-sm" />
+                    <input value={newProduct.price} onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })} placeholder="Price" type="number" step="0.01" min="0" required className="bg-zinc-950 border border-zinc-800 text-white rounded p-2 text-sm" />
+                    <input value={newProduct.barcode} onChange={(e) => setNewProduct({ ...newProduct, barcode: e.target.value })} placeholder="Barcode" className="bg-zinc-950 border border-zinc-800 text-white rounded p-2 text-sm" />
                     <Button type="submit" className="gold-gradient text-black">Save</Button>
                   </form>
                 )}
                 <div className="relative">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
-                  <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search or scan barcode..." className="w-full pl-10" autoFocus />
+                  <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search or scan barcode..." className="w-full pl-10 bg-zinc-950 border border-zinc-800 text-white rounded-lg p-2 text-sm" autoFocus />
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3">
                   {filtered.map((p) => {
                     const expiryDays = p.expiryDate ? Math.ceil((new Date(p.expiryDate).getTime() - new Date().setHours(0,0,0,0)) / (1000 * 60 * 60 * 24)) : Infinity
                     const expired = expiryDays < 0
                     const expiringSoon = expiryDays >= 0 && expiryDays <= 3
                     return (
                       <button key={p.id} onClick={() => addToCart(p)} className={`text-left rounded-lg bg-zinc-900 border overflow-hidden hover:shadow-lg transition-all ${expired ? 'border-red-500/60' : expiringSoon ? 'border-yellow-500/60' : 'border-zinc-700 hover:border-yellow-500/60 hover:shadow-yellow-500/10'}`}>
-                        <div className="h-20 bg-zinc-950 flex items-center justify-center border-b border-zinc-800">
-                          {p.image ? <img src={p.image} alt={p.name} className="h-full w-full object-cover" /> : <ImageIcon className="h-8 w-8 text-zinc-600" />}
+                        <div className="h-16 sm:h-20 bg-zinc-950 flex items-center justify-center border-b border-zinc-800">
+                          {p.image ? <img src={p.image} alt={p.name} className="h-full w-full object-cover" /> : <ImageIcon className="h-6 w-6 sm:h-8 sm:w-8 text-zinc-600" />}
                         </div>
-                        <div className="p-3">
-                          <p className="font-semibold text-zinc-100 truncate">{p.name}</p>
-                          <p className="text-sm text-zinc-400">{money(p.price)}</p>
+                        <div className="p-2 sm:p-3">
+                          <p className="font-semibold text-zinc-100 text-xs sm:text-sm truncate">{p.name}</p>
+                          <p className="text-xs sm:text-sm text-zinc-400">{money(p.price)}</p>
                           {expired && <p className="text-xs text-red-400 mt-1 flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Expired</p>}
                           {expiringSoon && !expired && <p className="text-xs text-yellow-400 mt-1 flex items-center gap-1"><Calendar className="h-3 w-3" /> {expiryDays}d left</p>}
                         </div>
@@ -243,7 +251,7 @@ export default function POSPage() {
             </Card>
           </div>
 
-          <div className="w-full lg:w-96">
+          <div className="w-full lg:w-96 hidden lg:block">
             <Card className="glass-card lg:sticky lg:top-4">
               <CardHeader className="pb-3 flex flex-row items-center justify-between">
                 <CardTitle className="text-white flex items-center gap-2"><ShoppingCart className="h-5 w-5 text-yellow-500" /> Cart</CardTitle>
@@ -278,7 +286,7 @@ export default function POSPage() {
 
                 <div className="space-y-2">
                   <label className="text-xs text-zinc-400">Discount</label>
-                  <select value={discountId} onChange={(e) => setDiscountId(e.target.value)} className="w-full">
+                  <select value={discountId} onChange={(e) => setDiscountId(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 text-white rounded p-2 text-sm">
                     <option value="">No discount</option>
                     {discounts.map((d) => <option key={d.id} value={d.id}>{d.name} ({d.type === 'percent' ? `${d.value}%` : money(d.value)})</option>)}
                   </select>
@@ -286,7 +294,7 @@ export default function POSPage() {
 
                 <div className="space-y-2">
                   <label className="text-xs text-zinc-400">Payment</label>
-                  <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as 'cash' | 'card' | 'mobile')} className="w-full">
+                  <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as 'cash' | 'card' | 'mobile')} className="w-full bg-zinc-950 border border-zinc-800 text-white rounded p-2 text-sm">
                     <option value="cash">Cash</option>
                     <option value="card">Card</option>
                     <option value="mobile">Mobile Money</option>
@@ -295,7 +303,7 @@ export default function POSPage() {
 
                 <div className="space-y-2">
                   <label className="text-xs text-zinc-400 flex items-center gap-1"><Building2 className="h-3 w-3" /> Branch</label>
-                  <select value={branchId} onChange={(e) => setBranchId(e.target.value)} className="w-full">
+                  <select value={branchId} onChange={(e) => setBranchId(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 text-white rounded p-2 text-sm">
                     <option value="">No branch</option>
                     {branches.filter((b) => b.status === 'active').map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
                   </select>
@@ -303,7 +311,7 @@ export default function POSPage() {
 
                 <div className="space-y-2">
                   <label className="text-xs text-zinc-400 flex items-center gap-1"><Mail className="h-3 w-3" /> Customer Email</label>
-                  <input type="email" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} placeholder="receipt@example.com" />
+                  <input type="email" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} placeholder="receipt@example.com" className="w-full bg-zinc-950 border border-zinc-800 text-white rounded p-2 text-sm" />
                 </div>
 
                 <div className="space-y-1 text-sm text-zinc-400 border-t border-zinc-800 pt-3">
@@ -322,7 +330,7 @@ export default function POSPage() {
                 {cart.length > 0 && (
                   <form onSubmit={suspendSale} className="space-y-2 border-t border-zinc-800 pt-3">
                     <label className="text-xs text-zinc-400">Sale narrative (optional)</label>
-                    <input value={suspendName} onChange={(e) => setSuspendName(e.target.value)} placeholder="e.g. Customer will be back" />
+                    <input value={suspendName} onChange={(e) => setSuspendName(e.target.value)} placeholder="e.g. Customer will be back" className="w-full bg-zinc-950 border border-zinc-800 text-white rounded p-2 text-sm" />
                     <Button type="submit" variant="outline" className="w-full border-zinc-700 text-zinc-300 hover:bg-zinc-800">
                       <Archive className="h-4 w-4 mr-2" /> Suspend Sale
                     </Button>
@@ -332,6 +340,73 @@ export default function POSPage() {
             </Card>
           </div>
         </div>
+
+        {/* Mobile cart bottom sheet */}
+        {showCart && (
+          <div className="fixed inset-0 z-50 lg:hidden no-print">
+            <div className="absolute inset-0 bg-black/70" onClick={() => setShowCart(false)} />
+            <div className="absolute bottom-0 left-0 right-0 max-h-[85vh] bg-zinc-900 border-t border-zinc-800 rounded-t-2xl flex flex-col">
+              <div className="flex items-center justify-between p-4 border-b border-zinc-800 shrink-0">
+                <CardTitle className="text-white flex items-center gap-2 text-base"><ShoppingCart className="h-5 w-5 text-yellow-500" /> Cart ({cart.length})</CardTitle>
+                <button onClick={() => setShowCart(false)} className="text-zinc-400 hover:text-white"><X className="h-5 w-5" /></button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {cart.length === 0 ? <p className="text-zinc-500 text-sm">Cart is empty</p> : (
+                  <div className="space-y-2">
+                    {cart.map((item) => (
+                      <div key={item.id} className="flex items-center justify-between p-2 rounded bg-zinc-950/60 border border-zinc-800">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate text-white">{item.name}</p>
+                          <p className="text-xs text-zinc-400">{money(item.price)}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => updateQty(item.id, -1)} className="p-1 rounded bg-zinc-800 hover:bg-zinc-700"><Minus className="h-3 w-3" /></button>
+                          <span className="w-6 text-center text-sm font-bold text-white">{item.qty}</span>
+                          <button onClick={() => updateQty(item.id, 1)} className="p-1 rounded bg-zinc-800 hover:bg-zinc-700"><Plus className="h-3 w-3" /></button>
+                          <button onClick={() => removeItem(item.id)} className="p-1 rounded bg-red-900/30 text-red-400 hover:bg-red-900/50"><Trash2 className="h-3 w-3" /></button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <label className="text-xs text-zinc-400">Discount</label>
+                  <select value={discountId} onChange={(e) => setDiscountId(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 text-white rounded p-2 text-sm">
+                    <option value="">No discount</option>
+                    {discounts.map((d) => <option key={d.id} value={d.id}>{d.name} ({d.type === 'percent' ? `${d.value}%` : money(d.value)})</option>)}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs text-zinc-400">Payment</label>
+                  <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as 'cash' | 'card' | 'mobile')} className="w-full bg-zinc-950 border border-zinc-800 text-white rounded p-2 text-sm">
+                    <option value="cash">Cash</option>
+                    <option value="card">Card</option>
+                    <option value="mobile">Mobile Money</option>
+                  </select>
+                </div>
+                <div className="space-y-1 text-sm text-zinc-400 border-t border-zinc-800 pt-3">
+                  <div className="flex justify-between"><span>Subtotal</span><span>{money(totals.subtotal)}</span></div>
+                  <div className="flex justify-between"><span>Discount</span><span className="text-yellow-500">-{money(totals.discount)}</span></div>
+                </div>
+                <div className="flex justify-between items-center text-lg font-bold text-white border-t border-zinc-800 pt-3">
+                  <span>Total</span>
+                  <span className="gold-text">{money(totals.total)}</span>
+                </div>
+                <div className="flex gap-2 pb-2">
+                  <Button variant="outline" onClick={() => doSuspend()} disabled={cart.length === 0} className="flex-1 border-zinc-700 text-zinc-300 hover:bg-zinc-800">
+                    <Archive className="h-4 w-4 mr-1" /> Suspend
+                  </Button>
+                  <Button variant="outline" onClick={() => { setShowCart(false); setShowSuspended(true) }} className="flex-1 border-zinc-700 text-zinc-300 hover:bg-zinc-800">
+                    <FolderOpen className="h-4 w-4 mr-1" /> Resume
+                  </Button>
+                </div>
+                <Button onClick={() => { checkout(); setShowCart(false) }} className="w-full gold-gradient text-black font-bold" disabled={cart.length === 0}>
+                  <CreditCard className="h-4 w-4 mr-2" /> Checkout
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {showSuspended && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 no-print">
@@ -391,6 +466,8 @@ export default function POSPage() {
             </Card>
           </div>
         )}
+
+        <POSAIAssistant />
       </DashboardLayout>
     </AuthGuard>
   )

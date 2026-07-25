@@ -114,7 +114,7 @@ export default function InventoryPage() {
           <CardContent className="p-4">
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search inventory..." className="w-full pl-10" />
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search inventory..." className="w-full pl-10 bg-zinc-950 border border-zinc-800 text-white rounded-lg p-2 text-sm" />
             </div>
           </CardContent>
         </Card>
@@ -180,7 +180,7 @@ export default function InventoryPage() {
               <CardHeader className="border-b border-zinc-800"><CardTitle className="text-white flex items-center gap-2"><Archive className="h-5 w-5 text-yellow-500" /> Restock</CardTitle></CardHeader>
               <CardContent className="p-4 space-y-4">
                 <p className="text-sm text-zinc-400">Add quantity to <span className="text-white font-medium">{products.find((p) => p.id === adjust.id)?.name}</span></p>
-                <input type="number" min="1" value={adjust.amount} onChange={(e) => setAdjust({ ...adjust, amount: e.target.value })} placeholder="Quantity to add" autoFocus />
+                <input type="number" min="1" value={adjust.amount} onChange={(e) => setAdjust({ ...adjust, amount: e.target.value })} placeholder="Quantity to add" autoFocus className="w-full bg-zinc-950 border border-zinc-800 text-white rounded p-2 text-sm" />
                 <div className="flex gap-3">
                   <Button onClick={applyAdjust} className="flex-1 gold-gradient text-black font-bold">Add Stock</Button>
                   <Button onClick={() => setAdjust(null)} variant="outline" className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">Cancel</Button>

@@ -65,7 +65,8 @@ export default function AssistantPage() {
   const [loading, setLoading] = useState(false)
   const [permissions, setPermissions] = useState<AIPermission[]>([])
   const [remaining, setRemaining] = useState({ minute: 10, hour: 50 })
-  const [showSidebar, setShowSidebar] = useState(true)
+  const [showSidebar, setShowSidebar] = useState(false)
+  const [showConvMobile, setShowConvMobile] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<boolean>(false)
 
@@ -256,9 +257,20 @@ export default function AssistantPage() {
           </div>
         </div>
 
-        <div className="flex gap-4 h-[calc(100vh-220px)] min-h-[500px]">
-          {showSidebar && (
-            <div className="w-64 shrink-0 flex flex-col gap-2 overflow-hidden">
+        <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-220px)] min-h-[500px]">
+          {/* Mobile conversation toggle */}
+          <Button
+            onClick={() => setShowConvMobile(!showConvMobile)}
+            variant="outline"
+            className="lg:hidden border-zinc-700 text-zinc-300"
+          >
+            <MessageSquare className="h-4 w-4 mr-2" />
+            {showConvMobile ? 'Hide Chats' : 'Show Chats'}
+            {conversations.length > 0 && <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 text-xs">{conversations.length}</span>}
+          </Button>
+
+          {/* Sidebar - desktop: always visible, mobile: toggle */}
+          <div className={`${showConvMobile ? 'flex' : 'hidden'} lg:flex w-full lg:w-64 shrink-0 flex-col gap-2 overflow-hidden max-h-[200px] lg:max-h-none`}>
               <Button
                 onClick={handleNewConversation}
                 className="gold-gradient text-black font-bold shrink-0"
@@ -273,7 +285,7 @@ export default function AssistantPage() {
                 {conversations.map((conv) => (
                   <div
                     key={conv.id}
-                    onClick={() => handleSelectConversation(conv)}
+                    onClick={() => { handleSelectConversation(conv); setShowConvMobile(false) }}
                     className={`group flex items-center gap-2 rounded-lg px-3 py-2 cursor-pointer transition-colors ${
                       activeConv?.id === conv.id
                         ? 'bg-yellow-500/10 border border-yellow-500/30'
@@ -283,7 +295,7 @@ export default function AssistantPage() {
                     <MessageSquare className="h-4 w-4 text-zinc-500 shrink-0" />
                     <span className="text-sm text-zinc-300 truncate flex-1">{conv.title}</span>
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleDeleteConversation(conv.id) }}
+                      onClick={(e) => { e.stopPropagation(); handleDeleteConversation(conv.id); setShowConvMobile(false) }}
                       className="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-red-400 transition-opacity"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -292,7 +304,6 @@ export default function AssistantPage() {
                 ))}
               </div>
             </div>
-          )}
 
           <div className="flex-1 flex flex-col min-w-0">
             <Card className="flex-1 flex flex-col glass-card overflow-hidden">
