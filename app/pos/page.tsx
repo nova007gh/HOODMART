@@ -29,6 +29,8 @@ export default function POSPage() {
   const [branches, setBranches] = useState<Branch[]>([])
   const [branchId, setBranchId] = useState('')
   const [customerEmail, setCustomerEmail] = useState('')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(60)
 
   const reload = () => { setProducts(store.getProducts()); setDiscounts(store.getDiscounts()); setBranches(store.getBranches()) }
   useEffect(() => { reload() }, [])
@@ -41,6 +43,15 @@ export default function POSPage() {
     const term = search.toLowerCase()
     return products.filter((p) => String(p.name || '').toLowerCase().includes(term) || String(p.barcode || '').includes(search))
   }, [products, search])
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
+  const currentPage = Math.min(page, totalPages)
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return filtered.slice(start, start + pageSize)
+  }, [filtered, currentPage, pageSize])
+
+  useEffect(() => { setPage(1) }, [search])
 
   const addToCart = (product: Product) => {
     setCart((prev) => {
@@ -227,7 +238,7 @@ export default function POSPage() {
                   <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search or scan barcode..." className="w-full pl-10 bg-zinc-950 border border-zinc-800 text-white rounded-lg p-2 text-sm" autoFocus />
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3">
-                  {filtered.map((p) => {
+                  {paginated.map((p) => {
                     const expiryDays = p.expiryDate ? Math.ceil((new Date(p.expiryDate).getTime() - new Date().setHours(0,0,0,0)) / (1000 * 60 * 60 * 24)) : Infinity
                     const expired = expiryDays < 0
                     const expiringSoon = expiryDays >= 0 && expiryDays <= 3
@@ -245,8 +256,31 @@ export default function POSPage() {
                       </button>
                     )
                   })}
-                  {filtered.length === 0 && <p className="col-span-full text-zinc-500 text-sm">No products found.</p>}
+                  {paginated.length === 0 && <p className="col-span-full text-zinc-500 text-sm">No products found.</p>}
                 </div>
+                {filtered.length > pageSize && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-zinc-800">
+                    <div className="flex items-center gap-2 text-sm text-zinc-400">
+                      <span>Page {currentPage} of {totalPages}</span>
+                      <span className="text-zinc-600">·</span>
+                      <span>{filtered.length} products</span>
+                      <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1) }} className="bg-zinc-950 border border-zinc-800 text-white rounded px-2 py-1 text-xs">
+                        <option value={30}>30 / page</option>
+                        <option value={60}>60 / page</option>
+                        <option value={120}>120 / page</option>
+                        <option value={9999}>All</option>
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant="outline" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)} className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
+                        Prev
+                      </Button>
+                      <Button size="sm" variant="outline" disabled={currentPage >= totalPages} onClick={() => setPage(currentPage + 1)} className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
