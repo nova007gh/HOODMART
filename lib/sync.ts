@@ -68,7 +68,7 @@ function stamp(payload: any) {
 }
 
 async function runRemote(table: string, payload: any, op: SyncOp) {
-  if (!isSupabaseConfigured()) return
+  if (!isSupabaseConfigured() || !supabase) return
   if (op === 'delete') {
     const id = payload?.id ?? payload
     if (!id) return
@@ -127,7 +127,7 @@ const TABLES = [
 ]
 
 export async function pullRemote(): Promise<void> {
-  if (!isSupabaseConfigured() || !isOnline()) return
+  if (!isSupabaseConfigured() || !isOnline() || !supabase) return
   for (const { table, key } of TABLES) {
     try {
       const { data, error } = await supabase.from(table).select('*')
