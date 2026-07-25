@@ -31,7 +31,7 @@ export default function LoginForm() {
     setError('')
 
     if (isRegister) {
-      const ok = register(email, password, name || email)
+      const ok = register(email, password, name || email, 'cashier', ['process_sales'])
       if (ok) {
         toast.success('Account created! Welcome to EMDPOS.')
         router.push('/dashboard')

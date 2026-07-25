@@ -5,8 +5,9 @@ import { AuthGuard } from '@/components/auth-guard'
 import { DashboardLayout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Settings, Store, Bell, Lock, Download, Upload, Trash2 } from 'lucide-react'
+import { Settings, Store, Bell, Lock, Download, Upload, Trash2, KeyRound, Users } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { getSession, updateUser } from '@/lib/auth'
 
 import { KEYS as STORE_KEYS } from '@/lib/store'
 
@@ -38,6 +39,8 @@ export default function SettingsPage() {
   const [storeName, setStoreName] = useState('EMDPOS Store')
   const [address, setAddress] = useState('')
   const [lowStock, setLowStock] = useState(true)
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -52,6 +55,18 @@ export default function SettingsPage() {
     localStorage.setItem('emdpos_store_address', address)
     localStorage.setItem('emdpos_low_stock', lowStock ? 'true' : 'false')
     toast.success('Settings saved')
+  }
+
+  const changePassword = (e: React.FormEvent) => {
+    e.preventDefault()
+    const session = getSession()
+    if (!session) return
+    if (!newPassword || newPassword.length < 6) return toast.error('Password must be at least 6 characters')
+    if (newPassword !== confirmPassword) return toast.error('Passwords do not match')
+    updateUser(session.user.email, { password: newPassword })
+    setNewPassword('')
+    setConfirmPassword('')
+    toast.success('Password changed successfully')
   }
 
   const exportData = () => {
@@ -134,7 +149,17 @@ export default function SettingsPage() {
               <CardTitle className="text-white flex items-center gap-2"><Lock className="h-5 w-5 text-yellow-500" /> Security</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <input type="password" placeholder="New password (coming soon)" disabled title="Password editing coming soon" />
+              <form onSubmit={changePassword} className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-xs text-zinc-400 flex items-center gap-1"><KeyRound className="h-3 w-3" /> New Password</label>
+                  <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Enter new password" className="w-full bg-zinc-950 border border-zinc-800 text-white rounded p-2 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-zinc-400">Confirm Password</label>
+                  <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm new password" className="w-full bg-zinc-950 border border-zinc-800 text-white rounded p-2 text-sm" />
+                </div>
+                <Button type="submit" variant="outline" className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">Change Password</Button>
+              </form>
             </CardContent>
           </Card>
 

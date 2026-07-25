@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { store, Product, money } from '@/lib/store'
 import { Search, Package, Plus, X, Camera, Calendar, AlertTriangle, Edit2, Trash2, Save, Image as ImageIcon } from 'lucide-react'
+import { Pagination } from '@/components/pagination'
 import toast from 'react-hot-toast'
 
 type ProductForm = {
@@ -66,6 +67,8 @@ export default function ProductsPage() {
   const [editing, setEditing] = useState<Product | null>(null)
   const [form, setForm] = useState<ProductForm>(emptyForm)
   const fileRef = useRef<HTMLInputElement>(null)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(12)
 
   const reload = () => setProducts(store.getProducts())
   useEffect(() => { reload() }, [])
@@ -86,6 +89,15 @@ export default function ProductsPage() {
       String(p.supplier || '').toLowerCase().includes(term)
     )
   }, [products, search])
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
+  const currentPage = Math.min(page, totalPages)
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return filtered.slice(start, start + pageSize)
+  }, [filtered, currentPage, pageSize])
+
+  useEffect(() => { setPage(1) }, [search])
 
   const lowStock = (p: Product) => (p.stock ?? 0) < (p.minStock ?? 0)
 
@@ -186,7 +198,7 @@ export default function ProductsPage() {
         </Card>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filtered.map((p) => {
+          {paginated.map((p) => {
             const exp = expiryStatus(p)
             return (
               <Card key={p.id} className="glass-card overflow-hidden flex flex-col">
@@ -222,7 +234,18 @@ export default function ProductsPage() {
               </Card>
             )
           })}
-          {filtered.length === 0 && <p className="col-span-full text-zinc-500">No products found.</p>}
+          {paginated.length === 0 && <p className="col-span-full text-zinc-500">No products found.</p>}
+        </div>
+
+        <div className="mt-6">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filtered.length}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(s) => { setPageSize(s); setPage(1) }}
+          />
         </div>
 
         {open && (

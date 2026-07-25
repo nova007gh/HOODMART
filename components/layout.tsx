@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
+import { hasPermission } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
 import {
   Store,
@@ -28,22 +29,22 @@ import {
 } from 'lucide-react'
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: Home },
-  { name: 'Point of Sale', href: '/pos', icon: ShoppingCart },
-  { name: 'Products', href: '/products', icon: Package },
-  { name: 'Inventory', href: '/inventory', icon: Database },
-  { name: 'Activities', href: '/activities', icon: Activity },
-  { name: 'Customers', href: '/customers', icon: Users },
-  { name: 'Employees', href: '/employees', icon: Briefcase },
-  { name: 'Suppliers', href: '/suppliers', icon: Truck },
-  { name: 'Branches', href: '/branches', icon: Store },
-  { name: 'Sales', href: '/sales', icon: CreditCard },
-  { name: 'Returns', href: '/returns', icon: Undo2 },
-  { name: 'Discounts', href: '/discounts', icon: Tag },
-  { name: 'Labels', href: '/labels', icon: TagIcon },
-  { name: 'Reports', href: '/reports', icon: BarChart3 },
-  { name: 'Intelligence', href: '/dashboard/assistant', icon: Brain },
-  { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'Dashboard', href: '/dashboard', icon: Home, perm: null },
+  { name: 'Point of Sale', href: '/pos', icon: ShoppingCart, perm: 'process_sales' },
+  { name: 'Products', href: '/products', icon: Package, perm: 'manage_products' },
+  { name: 'Inventory', href: '/inventory', icon: Database, perm: 'manage_inventory' },
+  { name: 'Activities', href: '/activities', icon: Activity, perm: 'manage_inventory' },
+  { name: 'Customers', href: '/customers', icon: Users, perm: null },
+  { name: 'Employees', href: '/employees', icon: Briefcase, perm: 'manage_employees' },
+  { name: 'Suppliers', href: '/suppliers', icon: Truck, perm: 'manage_products' },
+  { name: 'Branches', href: '/branches', icon: Store, perm: 'manage_branches' },
+  { name: 'Sales', href: '/sales', icon: CreditCard, perm: null },
+  { name: 'Returns', href: '/returns', icon: Undo2, perm: 'process_sales' },
+  { name: 'Discounts', href: '/discounts', icon: Tag, perm: 'manage_discounts' },
+  { name: 'Labels', href: '/labels', icon: TagIcon, perm: 'manage_products' },
+  { name: 'Reports', href: '/reports', icon: BarChart3, perm: 'view_reports' },
+  { name: 'Intelligence', href: '/dashboard/assistant', icon: Brain, perm: null },
+  { name: 'Settings', href: '/settings', icon: Settings, perm: null },
 ]
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -95,7 +96,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
-          {navigation.map((item) => {
+          {navigation.filter((item) => !item.perm || hasPermission(session?.user ?? null, item.perm)).map((item) => {
             const Icon = item.icon
             const current = pathname === item.href
             return (

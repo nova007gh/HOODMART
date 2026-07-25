@@ -160,6 +160,12 @@ export default function EmployeesPage() {
     toast.success('Employee removed')
   }
 
+  const toggleStatus = (emp: Employee) => {
+    store.updateEmployee(emp.id, { deleted: !emp.deleted })
+    setEmployees(store.getEmployees())
+    toast.success(emp.deleted ? 'Employee activated' : 'Employee deactivated')
+  }
+
   if (!isAdminUser) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-900 text-zinc-400">
@@ -236,9 +242,11 @@ export default function EmployeesPage() {
                           <p className="font-semibold text-white">{emp.name}</p>
                           <p className="text-xs text-zinc-400">{emp.username || 'No username'} · <span className="text-yellow-500 capitalize">{emp.role || 'cashier'}</span></p>
                         </div>
+                        {emp.deleted && <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30">Inactive</span>}
                       </div>
                       <div className="flex items-center gap-1">
                         <button onClick={() => startEdit(emp)} className="p-1.5 text-zinc-500 hover:text-yellow-400"><Pencil className="h-4 w-4" /></button>
+                        <button onClick={() => toggleStatus(emp)} className={`p-1.5 ${emp.deleted ? 'text-green-500 hover:text-green-400' : 'text-zinc-500 hover:text-zinc-300'}`} title={emp.deleted ? 'Activate' : 'Deactivate'}><Shield className="h-4 w-4" /></button>
                         <button onClick={() => remove(emp)} className="p-1.5 text-zinc-500 hover:text-red-400"><Trash2 className="h-4 w-4" /></button>
                       </div>
                     </div>

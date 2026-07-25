@@ -9,6 +9,7 @@ import { store, Product, Discount, CartItem, computeTotals, money, Sale, Branch,
 import { getSession } from '@/lib/auth'
 import { Search, ShoppingCart, Plus, Minus, Trash2, CreditCard, Printer, X, Banknote, AlertTriangle, Image as ImageIcon, Calendar, Archive, FolderOpen, Building2, Mail } from 'lucide-react'
 import { POSAIAssistant } from '@/components/pos-ai-assistant'
+import { Pagination } from '@/components/pagination'
 import toast from 'react-hot-toast'
 
 export default function POSPage() {
@@ -41,7 +42,7 @@ export default function POSPage() {
 
   const filtered = useMemo(() => {
     const term = search.toLowerCase()
-    return products.filter((p) => String(p.name || '').toLowerCase().includes(term) || String(p.barcode || '').includes(search))
+    return products.filter((p) => String(p.name || '').toLowerCase().includes(term) || String(p.barcode || '').toLowerCase().includes(term))
   }, [products, search])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
@@ -258,28 +259,16 @@ export default function POSPage() {
                   })}
                   {paginated.length === 0 && <p className="col-span-full text-zinc-500 text-sm">No products found.</p>}
                 </div>
-                {filtered.length > pageSize && (
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-zinc-800">
-                    <div className="flex items-center gap-2 text-sm text-zinc-400">
-                      <span>Page {currentPage} of {totalPages}</span>
-                      <span className="text-zinc-600">·</span>
-                      <span>{filtered.length} products</span>
-                      <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1) }} className="bg-zinc-950 border border-zinc-800 text-white rounded px-2 py-1 text-xs">
-                        <option value={30}>30 / page</option>
-                        <option value={60}>60 / page</option>
-                        <option value={120}>120 / page</option>
-                        <option value={9999}>All</option>
-                      </select>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" variant="outline" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)} className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
-                        Prev
-                      </Button>
-                      <Button size="sm" variant="outline" disabled={currentPage >= totalPages} onClick={() => setPage(currentPage + 1)} className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
-                        Next
-                      </Button>
-                    </div>
-                  </div>
+                {filtered.length > 0 && (
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={filtered.length}
+                    pageSize={pageSize}
+                    onPageChange={setPage}
+                    onPageSizeChange={(s) => { setPageSize(s); setPage(1) }}
+                    pageSizeOptions={[30, 60, 120]}
+                  />
                 )}
               </CardContent>
             </Card>
