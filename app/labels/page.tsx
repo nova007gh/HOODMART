@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { AuthGuard } from '@/components/auth-guard'
+import { AuthGuard, PermissionGuard } from '@/components/auth-guard'
 import { DashboardLayout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -35,6 +35,7 @@ export default function LabelsPage() {
 
   return (
     <AuthGuard>
+      <PermissionGuard permission="manage_products">
       <DashboardLayout>
         <div className="no-print">
           <Card className="glass-card mb-4">
@@ -71,6 +72,7 @@ export default function LabelsPage() {
           </div>
         )}
       </DashboardLayout>
+      </PermissionGuard>
     </AuthGuard>
   )
 }

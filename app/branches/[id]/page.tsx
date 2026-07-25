@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { AuthGuard } from '@/components/auth-guard'
+import { AuthGuard, PermissionGuard } from '@/components/auth-guard'
 import { DashboardLayout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -70,14 +70,17 @@ export default function BranchDetailPage() {
   if (loading) return <p className="text-zinc-400 p-8">Loading...</p>
   if (!branch) return (
     <AuthGuard>
+      <PermissionGuard permission="manage_branches">
       <DashboardLayout>
         <p className="text-zinc-400">Branch not found. <Button asChild variant="link"><Link href="/branches">Back</Link></Button></p>
       </DashboardLayout>
+      </PermissionGuard>
     </AuthGuard>
   )
 
   return (
     <AuthGuard>
+      <PermissionGuard permission="manage_branches">
       <DashboardLayout>
         <div className="mb-6 flex items-center gap-3">
           <Button asChild variant="outline" className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"><Link href="/branches"><ArrowLeft className="h-4 w-4 mr-1" /> Back</Link></Button>
@@ -136,6 +139,7 @@ export default function BranchDetailPage() {
           </Card>
         </div>
       </DashboardLayout>
+      </PermissionGuard>
     </AuthGuard>
   )
 }

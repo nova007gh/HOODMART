@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { AuthGuard } from '@/components/auth-guard'
+import { AuthGuard, PermissionGuard } from '@/components/auth-guard'
 import { DashboardLayout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -78,6 +78,7 @@ export default function InventoryPage() {
 
   return (
     <AuthGuard>
+      <PermissionGuard permission="manage_inventory">
       <DashboardLayout>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
           <div>
@@ -190,6 +191,7 @@ export default function InventoryPage() {
           </div>
         )}
       </DashboardLayout>
+      </PermissionGuard>
     </AuthGuard>
   )
 }

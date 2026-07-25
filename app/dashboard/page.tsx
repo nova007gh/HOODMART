@@ -6,6 +6,8 @@ import { DashboardLayout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { store, Product, Sale, money, formatDate } from '@/lib/store'
+import { useAuth } from '@/hooks/useAuth'
+import { hasPermission } from '@/lib/auth'
 import { ShoppingCart, Package, TrendingUp, DollarSign, BarChart3, AlertTriangle, Calendar, ArrowUpRight, CreditCard, Brain } from 'lucide-react'
 import Link from 'next/link'
 
@@ -48,8 +50,16 @@ function Bar({ value, max, label, total }: { value: number; max: number; label: 
 export default function DashboardPage() {
   const [sales, setSales] = useState<Sale[]>([])
   const [products, setProducts] = useState<Product[]>([])
+  const { session } = useAuth()
+  const user = session?.user ?? null
 
-  useEffect(() => { setSales(store.getSales()); setProducts(store.getProducts()) }, [])
+  useEffect(() => { setSales(store.getSales()); setProducts(store.getProducts()) }, []);
+
+  const canManageProducts = hasPermission(user, 'manage_products')
+  const canManageInventory = hasPermission(user, 'manage_inventory')
+  const canViewReports = hasPermission(user, 'view_reports')
+  const canProcessSales = hasPermission(user, 'process_sales')
+  const isAdminUser = user?.role === 'admin'
 
   const today = new Date().toISOString().slice(0, 10)
   const todaySales = sales.filter((s) => s.timestamp.startsWith(today))
@@ -89,76 +99,98 @@ export default function DashboardPage() {
         <div className="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-white">Dashboard</h1>
-            <p className="text-zinc-400">Live store performance, sales charts, and inventory insights.</p>
+            <p className="text-zinc-400">Welcome, {user?.name || 'User'} — <span className="capitalize text-yellow-500">{user?.role || 'user'}</span></p>
           </div>
           <div className="flex items-center gap-2">
-            <Button asChild variant="outline" className="border-yellow-500/40 text-yellow-500 hover:bg-yellow-500/10 hover:text-yellow-400 font-bold">
-              <Link href="/dashboard/assistant"><Brain className="h-4 w-4 mr-2" /> EMDPOS Intelligence</Link>
-            </Button>
-            <Button asChild className="gold-gradient text-black font-bold">
-              <Link href="/pos"><ShoppingCart className="h-4 w-4 mr-2" /> New Sale</Link>
-            </Button>
+            {canViewReports && (
+              <Button asChild variant="outline" className="border-yellow-500/40 text-yellow-500 hover:bg-yellow-500/10 hover:text-yellow-400 font-bold">
+                <Link href="/dashboard/assistant"><Brain className="h-4 w-4 mr-2" /> EMDPOS Intelligence</Link>
+              </Button>
+            )}
+            {canProcessSales && (
+              <Button asChild className="gold-gradient text-black font-bold">
+                <Link href="/pos"><ShoppingCart className="h-4 w-4 mr-2" /> New Sale</Link>
+              </Button>
+            )}
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <Card className="card-gold">
-            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-zinc-300 flex items-center gap-2"><DollarSign className="h-4 w-4 text-yellow-500" /> Total Sales</CardTitle></CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold gold-text">{money(totalRevenue)}</div>
-              <p className="text-xs text-zinc-400">{sales.length} transactions</p>
-            </CardContent>
-          </Card>
-          <Card className="card-gold">
-            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-zinc-300 flex items-center gap-2"><TrendingUp className="h-4 w-4 text-green-500" /> Today&apos;s Sales</CardTitle></CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-400">{money(todayRevenue)}</div>
-              <p className="text-xs text-zinc-400">{todaySales.length} transactions today</p>
-            </CardContent>
-          </Card>
-          <Card className="card-gold">
-            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-zinc-300 flex items-center gap-2"><CreditCard className="h-4 w-4 text-purple-500" /> Avg Order</CardTitle></CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-purple-400">{money(avgOrder)}</div>
-              <p className="text-xs text-zinc-400">Per transaction</p>
-            </CardContent>
-          </Card>
-          <Card className="card-gold">
-            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-zinc-300 flex items-center gap-2"><Package className="h-4 w-4 text-blue-500" /> Inventory Value</CardTitle></CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-400">{money(inventoryValue)}</div>
-              <p className="text-xs text-zinc-400">{totalItems} items in stock</p>
-            </CardContent>
-          </Card>
+          {canViewReports && (
+            <>
+              <Card className="card-gold">
+                <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-zinc-300 flex items-center gap-2"><DollarSign className="h-4 w-4 text-yellow-500" /> Total Sales</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold gold-text">{money(totalRevenue)}</div>
+                  <p className="text-xs text-zinc-400">{sales.length} transactions</p>
+                </CardContent>
+              </Card>
+              <Card className="card-gold">
+                <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-zinc-300 flex items-center gap-2"><TrendingUp className="h-4 w-4 text-green-500" /> Today&apos;s Sales</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-400">{money(todayRevenue)}</div>
+                  <p className="text-xs text-zinc-400">{todaySales.length} transactions today</p>
+                </CardContent>
+              </Card>
+              <Card className="card-gold">
+                <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-zinc-300 flex items-center gap-2"><CreditCard className="h-4 w-4 text-purple-500" /> Avg Order</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-purple-400">{money(avgOrder)}</div>
+                  <p className="text-xs text-zinc-400">Per transaction</p>
+                </CardContent>
+              </Card>
+            </>
+          )}
+          {canManageInventory && (
+            <Card className="card-gold">
+              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-zinc-300 flex items-center gap-2"><Package className="h-4 w-4 text-blue-500" /> Inventory Value</CardTitle></CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-400">{money(inventoryValue)}</div>
+                <p className="text-xs text-zinc-400">{totalItems} items in stock</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-          <Button asChild className="h-20 flex-col gap-2 gold-gradient text-black"><Link href="/pos"><ShoppingCart className="h-6 w-6" /><span>New Sale</span></Link></Button>
-          <Button asChild variant="outline" className="h-20 flex-col gap-2 border-yellow-500/40 text-yellow-500 hover:bg-yellow-500/10 hover:border-yellow-500/50"><Link href="/dashboard/assistant"><Brain className="h-6 w-6" /><span>Intelligence</span></Link></Button>
-          <Button asChild variant="outline" className="h-20 flex-col gap-2 border-zinc-700 text-zinc-200 hover:bg-zinc-800 hover:border-yellow-500/50"><Link href="/products"><ArrowUpRight className="h-6 w-6" /><span>Add Product</span></Link></Button>
-          <Button asChild variant="outline" className="h-20 flex-col gap-2 border-zinc-700 text-zinc-200 hover:bg-zinc-800 hover:border-yellow-500/50"><Link href="/inventory"><Package className="h-6 w-6" /><span>Inventory</span></Link></Button>
+          {canProcessSales && (
+            <Button asChild className="h-20 flex-col gap-2 gold-gradient text-black"><Link href="/pos"><ShoppingCart className="h-6 w-6" /><span>New Sale</span></Link></Button>
+          )}
+          {canViewReports && (
+            <Button asChild variant="outline" className="h-20 flex-col gap-2 border-yellow-500/40 text-yellow-500 hover:bg-yellow-500/10 hover:border-yellow-500/50"><Link href="/dashboard/assistant"><Brain className="h-6 w-6" /><span>Intelligence</span></Link></Button>
+          )}
+          {canManageProducts && (
+            <Button asChild variant="outline" className="h-20 flex-col gap-2 border-zinc-700 text-zinc-200 hover:bg-zinc-800 hover:border-yellow-500/50"><Link href="/products"><ArrowUpRight className="h-6 w-6" /><span>Add Product</span></Link></Button>
+          )}
+          {canManageInventory && (
+            <Button asChild variant="outline" className="h-20 flex-col gap-2 border-zinc-700 text-zinc-200 hover:bg-zinc-800 hover:border-yellow-500/50"><Link href="/inventory"><Package className="h-6 w-6" /><span>Inventory</span></Link></Button>
+          )}
           <Button asChild variant="outline" className="h-20 flex-col gap-2 border-zinc-700 text-zinc-200 hover:bg-zinc-800 hover:border-yellow-500/50"><Link href="/sales"><BarChart3 className="h-6 w-6" /><span>Sales</span></Link></Button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <Card className="glass-card">
-            <CardHeader><CardTitle className="flex items-center gap-2"><BarChart3 className="h-5 w-5 text-yellow-500" /> Sales Last 7 Days</CardTitle></CardHeader>
-            <CardContent>
-              <div className="h-48 flex items-end gap-3">
-                {daily.map((d) => <Bar key={d.date} value={d.total} max={maxDaily} label={new Date(d.date).toLocaleDateString(undefined, { weekday: 'short' })} total={d.total} />)}
-              </div>
-            </CardContent>
-          </Card>
+          {canViewReports && (
+            <Card className="glass-card">
+              <CardHeader><CardTitle className="flex items-center gap-2"><BarChart3 className="h-5 w-5 text-yellow-500" /> Sales Last 7 Days</CardTitle></CardHeader>
+              <CardContent>
+                <div className="h-48 flex items-end gap-3">
+                  {daily.map((d) => <Bar key={d.date} value={d.total} max={maxDaily} label={new Date(d.date).toLocaleDateString(undefined, { weekday: 'short' })} total={d.total} />)}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-          <Card className="glass-card">
-            <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5 text-yellow-500" /> Top Selling Products</CardTitle></CardHeader>
-            <CardContent>
-              <div className="h-48 flex items-end gap-3">
-                {topProducts.map((p, i) => <Bar key={i} value={p.qty} max={maxTop} label={p.name} />)}
-              </div>
-              {topProducts.length === 0 && <p className="text-zinc-500 text-sm">No sales yet.</p>}
-            </CardContent>
-          </Card>
+          {canViewReports && (
+            <Card className="glass-card">
+              <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5 text-yellow-500" /> Top Selling Products</CardTitle></CardHeader>
+              <CardContent>
+                <div className="h-48 flex items-end gap-3">
+                  {topProducts.map((p, i) => <Bar key={i} value={p.qty} max={maxTop} label={p.name} />)}
+                </div>
+                {topProducts.length === 0 && <p className="text-zinc-500 text-sm">No sales yet.</p>}
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -178,72 +210,78 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="glass-card">
-            <CardHeader><CardTitle className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-red-500" /> Low Stock Alert</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              {lowStock.map((p) => (
-                <div key={p.id} className="flex items-center justify-between p-2 rounded bg-zinc-900/60 border border-zinc-800">
-                  <div>
-                    <p className="font-medium text-sm">{p.name}</p>
-                    <p className="text-xs text-zinc-500">Stock: {p.stock} / Min: {p.minStock}</p>
+          {canManageInventory && (
+            <Card className="glass-card">
+              <CardHeader><CardTitle className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-red-500" /> Low Stock Alert</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                {lowStock.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between p-2 rounded bg-zinc-900/60 border border-zinc-800">
+                    <div>
+                      <p className="font-medium text-sm">{p.name}</p>
+                      <p className="text-xs text-zinc-500">Stock: {p.stock} / Min: {p.minStock}</p>
+                    </div>
+                    <span className="text-xs px-2 py-1 rounded-full bg-red-900/30 text-red-400">critical</span>
                   </div>
-                  <span className="text-xs px-2 py-1 rounded-full bg-red-900/30 text-red-400">critical</span>
-                </div>
-              ))}
-              {lowStock.length === 0 && <p className="text-zinc-500 text-sm">All stock levels healthy.</p>}
-            </CardContent>
-          </Card>
+                ))}
+                {lowStock.length === 0 && <p className="text-zinc-500 text-sm">All stock levels healthy.</p>}
+              </CardContent>
+            </Card>
+          )}
 
-          <Card className="glass-card">
-            <CardHeader><CardTitle className="flex items-center gap-2"><Calendar className="h-4 w-4 text-yellow-500" /> Expiry Alert</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              {expiring.map((p) => (
-                <div key={p.id} className="flex items-center justify-between p-2 rounded bg-zinc-900/60 border border-zinc-800">
-                  <div>
-                    <p className="font-medium text-sm">{p.name}</p>
-                    <p className="text-xs text-zinc-500">Expires {p.expiryDate}</p>
+          {canManageInventory && (
+            <Card className="glass-card">
+              <CardHeader><CardTitle className="flex items-center gap-2"><Calendar className="h-4 w-4 text-yellow-500" /> Expiry Alert</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                {expiring.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between p-2 rounded bg-zinc-900/60 border border-zinc-800">
+                    <div>
+                      <p className="font-medium text-sm">{p.name}</p>
+                      <p className="text-xs text-zinc-500">Expires {p.expiryDate}</p>
+                    </div>
+                    <span className="text-xs px-2 py-1 rounded-full bg-yellow-900/30 text-yellow-400">soon</span>
                   </div>
-                  <span className="text-xs px-2 py-1 rounded-full bg-yellow-900/30 text-yellow-400">soon</span>
-                </div>
-              ))}
-              {expired.map((p) => (
-                <div key={p.id} className="flex items-center justify-between p-2 rounded bg-zinc-900/60 border border-zinc-800">
-                  <div>
-                    <p className="font-medium text-sm">{p.name}</p>
-                    <p className="text-xs text-zinc-500">Expired {p.expiryDate}</p>
+                ))}
+                {expired.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between p-2 rounded bg-zinc-900/60 border border-zinc-800">
+                    <div>
+                      <p className="font-medium text-sm">{p.name}</p>
+                      <p className="text-xs text-zinc-500">Expired {p.expiryDate}</p>
+                    </div>
+                    <span className="text-xs px-2 py-1 rounded-full bg-red-900/30 text-red-400">expired</span>
                   </div>
-                  <span className="text-xs px-2 py-1 rounded-full bg-red-900/30 text-red-400">expired</span>
-                </div>
-              ))}
-              {expiring.length === 0 && expired.length === 0 && <p className="text-zinc-500 text-sm">No expiry alerts.</p>}
-            </CardContent>
-          </Card>
+                ))}
+                {expiring.length === 0 && expired.length === 0 && <p className="text-zinc-500 text-sm">No expiry alerts.</p>}
+              </CardContent>
+            </Card>
+          )}
         </div>
 
-        <Card className="glass-card border-yellow-500/20 mt-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-yellow-500">
-              <Brain className="h-5 w-5" /> EMDPOS Intelligence
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-zinc-400 mb-4">Ask questions about your business and get AI-powered insights from your live data.</p>
-            <div className="flex flex-wrap gap-2">
-              <Button asChild className="gold-gradient text-black font-bold text-sm">
-                <Link href="/dashboard/assistant"><Brain className="h-4 w-4 mr-2" /> Open Assistant</Link>
-              </Button>
-              <Button asChild variant="outline" className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-sm">
-                <Link href="/dashboard/assistant">What are today&apos;s sales?</Link>
-              </Button>
-              <Button asChild variant="outline" className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-sm">
-                <Link href="/dashboard/assistant">Which products should I restock?</Link>
-              </Button>
-              <Button asChild variant="outline" className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-sm">
-                <Link href="/dashboard/assistant">Give me a business summary</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        {canViewReports && (
+          <Card className="glass-card border-yellow-500/20 mt-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-yellow-500">
+                <Brain className="h-5 w-5" /> EMDPOS Intelligence
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-zinc-400 mb-4">Ask questions about your business and get AI-powered insights from your live data.</p>
+              <div className="flex flex-wrap gap-2">
+                <Button asChild className="gold-gradient text-black font-bold text-sm">
+                  <Link href="/dashboard/assistant"><Brain className="h-4 w-4 mr-2" /> Open Assistant</Link>
+                </Button>
+                <Button asChild variant="outline" className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-sm">
+                  <Link href="/dashboard/assistant">What are today&apos;s sales?</Link>
+                </Button>
+                <Button asChild variant="outline" className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-sm">
+                  <Link href="/dashboard/assistant">Which products should I restock?</Link>
+                </Button>
+                <Button asChild variant="outline" className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-sm">
+                  <Link href="/dashboard/assistant">Give me a business summary</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </DashboardLayout>
     </AuthGuard>
   )

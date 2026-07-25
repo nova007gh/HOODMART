@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { AuthGuard } from '@/components/auth-guard'
+import { AuthGuard, PermissionGuard } from '@/components/auth-guard'
 import { DashboardLayout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -39,6 +39,7 @@ export default function DiscountsPage() {
 
   return (
     <AuthGuard>
+      <PermissionGuard permission="manage_discounts">
       <DashboardLayout>
         <Card className="glass-card">
           <CardHeader>
@@ -80,6 +81,7 @@ export default function DiscountsPage() {
           </CardContent>
         </Card>
       </DashboardLayout>
+      </PermissionGuard>
     </AuthGuard>
   )
 }

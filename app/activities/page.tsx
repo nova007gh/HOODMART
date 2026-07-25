@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { AuthGuard } from '@/components/auth-guard'
+import { AuthGuard, PermissionGuard } from '@/components/auth-guard'
 import { DashboardLayout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -42,6 +42,7 @@ export default function ActivitiesPage() {
 
   return (
     <AuthGuard>
+      <PermissionGuard permission="manage_inventory">
       <DashboardLayout>
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -86,6 +87,7 @@ export default function ActivitiesPage() {
           </Card>
         </div>
       </DashboardLayout>
+      </PermissionGuard>
     </AuthGuard>
   )
 }

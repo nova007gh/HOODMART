@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { AuthGuard } from '@/components/auth-guard'
+import { AuthGuard, PermissionGuard } from '@/components/auth-guard'
 import { DashboardLayout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -51,6 +51,7 @@ export default function BranchesPage() {
 
   return (
     <AuthGuard>
+      <PermissionGuard permission="manage_branches">
       <DashboardLayout>
         <div className="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
@@ -114,6 +115,7 @@ export default function BranchesPage() {
           })}
         </div>
       </DashboardLayout>
+      </PermissionGuard>
     </AuthGuard>
   )
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { AuthGuard } from '@/components/auth-guard'
+import { AuthGuard, PermissionGuard } from '@/components/auth-guard'
 import { DashboardLayout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -178,6 +178,7 @@ export default function EmployeesPage() {
 
   return (
     <AuthGuard>
+      <PermissionGuard permission="manage_employees">
       <DashboardLayout>
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -334,6 +335,7 @@ export default function EmployeesPage() {
           </Card>
         </div>
       </DashboardLayout>
+      </PermissionGuard>
     </AuthGuard>
   )
 }

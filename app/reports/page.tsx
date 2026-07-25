@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { AuthGuard } from '@/components/auth-guard'
+import { AuthGuard, PermissionGuard } from '@/components/auth-guard'
 import { DashboardLayout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -136,6 +136,7 @@ export default function ReportsPage() {
 
   return (
     <AuthGuard>
+      <PermissionGuard permission="view_reports">
       <DashboardLayout>
         <div className="space-y-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -267,6 +268,7 @@ export default function ReportsPage() {
           </Card>
         </div>
       </DashboardLayout>
+      </PermissionGuard>
     </AuthGuard>
   )
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AuthGuard } from '@/components/auth-guard'
+import { AuthGuard, PermissionGuard } from '@/components/auth-guard'
 import { DashboardLayout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -172,6 +172,7 @@ export default function ProductsPage() {
 
   return (
     <AuthGuard>
+      <PermissionGuard permission="manage_products">
       <DashboardLayout>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
           <div>
@@ -301,6 +302,7 @@ export default function ProductsPage() {
           </div>
         )}
       </DashboardLayout>
+      </PermissionGuard>
     </AuthGuard>
   )
 }
