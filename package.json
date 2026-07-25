@@ -1,0 +1,86 @@
+{
+  "name": "emdpos-retail-os",
+  "version": "2.0.0",
+  "description": "EMDPOS Retail Point of Sale System - Next.js Cross-Platform",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit",
+    "db:push": "supabase db push",
+    "db:reset": "supabase db reset",
+    "generate": "supabase gen types typescript --local > lib/database.types.ts",
+    "mobile": "capacitor sync",
+    "mobile:android": "capacitor run android",
+    "mobile:ios": "capacitor run ios",
+    "desktop": "electron .",
+    "desktop:build": "electron-builder"
+  },
+  "dependencies": {
+    "next": "14.1.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "@supabase/supabase-js": "^2.45.4",
+    "@supabase/ssr": "^0.5.1",
+    "@tanstack/react-query": "^5.51.1",
+    "zustand": "^4.5.4",
+    "react-hook-form": "^7.52.1",
+    "@hookform/resolvers": "^3.6.0",
+    "zod": "^3.23.8",
+    "lucide-react": "^0.400.0",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.4.0",
+    "recharts": "^2.12.7",
+    "date-fns": "^3.6.0",
+    "react-hot-toast": "^2.4.1",
+    "@capacitor/core": "^5.7.5",
+    "@capacitor/cli": "^5.7.5",
+    "jspdf": "^2.5.1",
+    "html2canvas": "^1.4.1",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.3",
+    "@types/node": "^20.14.10",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@types/qrcode": "^1.5.5",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.39",
+    "tailwindcss": "^3.4.4",
+    "tailwindcss-animate": "^1.0.7",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "14.2.5",
+    "@capacitor/android": "^5.7.5",
+    "@capacitor/ios": "^5.7.5",
+    "electron": "^31.3.0",
+    "electron-builder": "^24.13.3",
+    "concurrently": "^8.2.2",
+    "@radix-ui/react-label": "^2.1.0",
+    "@radix-ui/react-slot": "^1.1.0",
+    "@tanstack/react-query-devtools": "^5.51.1"
+  },
+  "build": {
+    "appId": "com.emdpos.retail.next",
+    "productName": "EMDPOS Retail OS 2.0",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "out/**/*",
+      "main.js",
+      "preload.js"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ]
+    }
+  }
+}

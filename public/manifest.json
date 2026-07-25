@@ -1,0 +1,41 @@
+{
+  "name": "EMDPOS Retail OS 2.0",
+  "short_name": "EMDPOS",
+  "description": "Modern Point of Sale System for Retail Businesses",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#18181b",
+  "theme_color": "#facc15",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["business", "productivity", "finance"],
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Sale",
+      "short_name": "Sale",
+      "description": "Start a new sale transaction",
+      "url": "/pos"
+    },
+    {
+      "name": "Inventory",
+      "short_name": "Stock",
+      "description": "Manage inventory",
+      "url": "/inventory"
+    },
+    {
+      "name": "Reports",
+      "short_name": "Analytics",
+      "description": "View reports and analytics",
+      "url": "/reports"
+    }
+  ]
+}
