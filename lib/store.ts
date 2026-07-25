@@ -160,7 +160,11 @@ function get<T>(k: string, def: T): T {
 
 function set<T>(k: string, v: T) {
   if (typeof window === 'undefined') return
-  localStorage.setItem(k, JSON.stringify(v))
+  try {
+    localStorage.setItem(k, JSON.stringify(v))
+  } catch (err) {
+    console.warn('localStorage set failed:', k, err)
+  }
 }
 
 function uuid() {
@@ -170,13 +174,18 @@ function uuid() {
 function seedIfNeeded() {
   if (typeof window === 'undefined') return
   if (get(SEED_KEY, false)) return
+  const seedItems: [string, any][] = [
+    [KEYS.PRODUCTS, sqlProducts],
+    [KEYS.ACTIVITIES, sqlActivities],
+    [KEYS.CUSTOMERS, sqlCustomers],
+    [KEYS.EMPLOYEES, sqlEmployees],
+    [KEYS.SUPPLIERS, sqlSuppliers],
+    [KEYS.SALES, sqlSales],
+  ]
+  for (const [key, data] of seedItems) {
+    set(key, data)
+  }
   set(SEED_KEY, true)
-  set(KEYS.PRODUCTS, sqlProducts)
-  set(KEYS.ACTIVITIES, sqlActivities)
-  set(KEYS.CUSTOMERS, sqlCustomers)
-  set(KEYS.EMPLOYEES, sqlEmployees)
-  set(KEYS.SUPPLIERS, sqlSuppliers)
-  set(KEYS.SALES, sqlSales)
 }
 
 export const store = {

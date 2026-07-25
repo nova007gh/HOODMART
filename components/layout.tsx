@@ -54,7 +54,11 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [storeName, setStoreName] = useState('EMDPOS')
 
   useEffect(() => {
-    setStoreName(localStorage.getItem('emdpos_store_name') || 'EMDPOS')
+    try {
+      setStoreName(localStorage.getItem('emdpos_store_name') || 'EMDPOS')
+    } catch {
+      setStoreName('EMDPOS')
+    }
   }, [])
 
   const handleLogout = () => {
