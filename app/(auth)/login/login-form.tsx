@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { login, register } from '@/lib/auth'
+import { login, register, listUsers } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -44,7 +44,9 @@ export default function LoginForm() {
         toast.success('Welcome back to EMDPOS!')
         router.push('/dashboard')
       } else {
-        setError('Invalid email or password.')
+        const users = listUsers()
+        const knownEmails = users.map((u) => u.email).join(', ')
+        setError(`Invalid email or password. Registered accounts: ${knownEmails || 'none'}`)
       }
     }
 
@@ -157,6 +159,21 @@ export default function LoginForm() {
                   Default admin: <span className="text-zinc-400 font-mono">nova@gmail.com</span> / <span className="text-zinc-400 font-mono">qwerty123</span>
                 </p>
               )}
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm('This will clear all local data and reset the app. Continue?')) {
+                    localStorage.clear()
+                    if ('serviceWorker' in navigator) {
+                      navigator.serviceWorker.getRegistrations().then((regs) => regs.forEach((r) => r.unregister()))
+                    }
+                    window.location.reload()
+                  }
+                }}
+                className="text-xs text-zinc-600 hover:text-red-400 transition-colors"
+              >
+                Reset app data
+              </button>
             </div>
           </CardContent>
         </Card>
