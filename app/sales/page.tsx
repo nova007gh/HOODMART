@@ -83,9 +83,9 @@ export default function SalesPage() {
   const filtered = useMemo(() => {
     const term = search.toLowerCase()
     return sales.filter((s) =>
-      s.id.toLowerCase().includes(term) ||
-      (s.userName || '').toLowerCase().includes(term) ||
-      s.items.some((i) => i.name.toLowerCase().includes(term))
+      String(s.id || '').toLowerCase().includes(term) ||
+      String(s.userName || '').toLowerCase().includes(term) ||
+      s.items.some((i) => String(i.name || '').toLowerCase().includes(term))
     )
   }, [sales, search])
 

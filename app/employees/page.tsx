@@ -72,11 +72,11 @@ export default function EmployeesPage() {
   const filtered = useMemo(() => {
     const term = search.toLowerCase()
     return employees.filter((e) =>
-      e.name.toLowerCase().includes(term) ||
-      (e.username || '').toLowerCase().includes(term) ||
-      (e.email || '').toLowerCase().includes(term) ||
-      (e.phone || '').toLowerCase().includes(term) ||
-      (e.role || '').toLowerCase().includes(term)
+      String(e.name || '').toLowerCase().includes(term) ||
+      String(e.username || '').toLowerCase().includes(term) ||
+      String(e.email || '').toLowerCase().includes(term) ||
+      String(e.phone || '').toLowerCase().includes(term) ||
+      String(e.role || '').toLowerCase().includes(term)
     )
   }, [employees, search])
 

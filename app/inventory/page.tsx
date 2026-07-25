@@ -36,10 +36,10 @@ export default function InventoryPage() {
   const filtered = useMemo(() => {
     const term = search.toLowerCase()
     return products.filter((p) =>
-      p.name.toLowerCase().includes(term) ||
-      (p.barcode || '').toLowerCase().includes(term) ||
-      (p.category || '').toLowerCase().includes(term) ||
-      (p.supplier || '').toLowerCase().includes(term)
+      String(p.name || '').toLowerCase().includes(term) ||
+      String(p.barcode || '').toLowerCase().includes(term) ||
+      String(p.category || '').toLowerCase().includes(term) ||
+      String(p.supplier || '').toLowerCase().includes(term)
     )
   }, [products, search])
 

@@ -20,9 +20,9 @@ export default function SuppliersPage() {
   const filtered = useMemo(() => {
     const term = search.toLowerCase()
     return suppliers.filter((s) =>
-      s.name.toLowerCase().includes(term) ||
-      (s.companyName || '').toLowerCase().includes(term) ||
-      (s.agencyName || '').toLowerCase().includes(term)
+      String(s.name || '').toLowerCase().includes(term) ||
+      String(s.companyName || '').toLowerCase().includes(term) ||
+      String(s.agencyName || '').toLowerCase().includes(term)
     )
   }, [suppliers, search])
 

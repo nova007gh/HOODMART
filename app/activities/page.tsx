@@ -32,10 +32,10 @@ export default function ActivitiesPage() {
     return activities.filter((a) => {
       const product = productMap.get(a.itemId)
       return (
-        (product?.name || '').toLowerCase().includes(term) ||
-        a.itemId.toLowerCase().includes(term) ||
-        (a.comment || '').toLowerCase().includes(term) ||
-        (a.user || '').toLowerCase().includes(term)
+        String(product?.name || '').toLowerCase().includes(term) ||
+        String(a.itemId || '').toLowerCase().includes(term) ||
+        String(a.comment || '').toLowerCase().includes(term) ||
+        String(a.user || '').toLowerCase().includes(term)
       )
     })
   }, [activities, search, productMap])

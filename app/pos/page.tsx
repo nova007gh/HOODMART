@@ -39,7 +39,7 @@ export default function POSPage() {
 
   const filtered = useMemo(() => {
     const term = search.toLowerCase()
-    return products.filter((p) => p.name.toLowerCase().includes(term) || (p.barcode || '').includes(search))
+    return products.filter((p) => String(p.name || '').toLowerCase().includes(term) || String(p.barcode || '').includes(search))
   }, [products, search])
 
   const addToCart = (product: Product) => {

@@ -25,10 +25,10 @@ export default function CustomersPage() {
   const filtered = useMemo(() => {
     const term = search.toLowerCase()
     return customers.filter((c) =>
-      c.name.toLowerCase().includes(term) ||
-      (c.phone || '').toLowerCase().includes(term) ||
-      (c.email || '').toLowerCase().includes(term) ||
-      (c.companyName || '').toLowerCase().includes(term)
+      String(c.name || '').toLowerCase().includes(term) ||
+      String(c.phone || '').toLowerCase().includes(term) ||
+      String(c.email || '').toLowerCase().includes(term) ||
+      String(c.companyName || '').toLowerCase().includes(term)
     )
   }, [customers, search])
 
