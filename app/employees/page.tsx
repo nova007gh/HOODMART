@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { store, Employee } from '@/lib/store'
-import { createUser, updateUser, deleteUser, getSession, isAdmin } from '@/lib/auth'
+import { createUser, updateUser, deleteUser, getSession, isAdmin, listUsers } from '@/lib/auth'
 import { Users, Search, User, Mail, Phone, Shield, Pencil, Trash2, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -51,6 +51,7 @@ export default function EmployeesPage() {
   const [editId, setEditId] = useState<string | null>(null)
   const [editEmail, setEditEmail] = useState<string | null>(null)
   const [isAdminUser, setIsAdminUser] = useState(false)
+  const [createdCreds, setCreatedCreds] = useState<{ email: string; password: string; name: string } | null>(null)
 
   const load = () => {
     const session = getSession()
@@ -123,7 +124,8 @@ export default function EmployeesPage() {
         role: form.role,
         permissions: form.permissions,
       })
-      toast.success('Employee created')
+      setCreatedCreds({ email: form.email.trim().toLowerCase(), password: form.password, name: form.name })
+      toast.success(`Employee created! Login with ${form.email.trim().toLowerCase()}`)
     }
 
     setForm(emptyForm)
@@ -190,15 +192,50 @@ export default function EmployeesPage() {
               {editId && <Button variant="outline" onClick={cancelEdit} className="text-zinc-300 border-zinc-700"><X className="h-4 w-4 mr-1" /> Cancel</Button>}
             </CardHeader>
             <CardContent className="space-y-4">
+              {createdCreds && (
+                <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-4 space-y-2">
+                  <p className="text-sm font-semibold text-green-400">✓ Employee Created Successfully</p>
+                  <p className="text-xs text-zinc-300">Share these login credentials with <span className="text-white font-medium">{createdCreds.name}</span>:</p>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-zinc-950 border border-zinc-800 rounded p-2">
+                      <p className="text-zinc-500">Login Email</p>
+                      <p className="text-white font-mono">{createdCreds.email}</p>
+                    </div>
+                    <div className="bg-zinc-950 border border-zinc-800 rounded p-2">
+                      <p className="text-zinc-500">Password</p>
+                      <p className="text-white font-mono">{createdCreds.password}</p>
+                    </div>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => setCreatedCreds(null)} className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 mt-2">Dismiss</Button>
+                </div>
+              )}
               <form onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Full name" required className="bg-zinc-950 border-zinc-800 text-white" />
-                <Input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} placeholder="Username" className="bg-zinc-950 border-zinc-800 text-white" />
-                <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Email" type="email" required className="bg-zinc-950 border-zinc-800 text-white" />
-                <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="Phone" className="bg-zinc-950 border-zinc-800 text-white" />
-                <Input value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder={editId ? 'New password (optional)' : 'Password'} type="password" required={!editId} className="bg-zinc-950 border-zinc-800 text-white" />
-                <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="h-10 rounded-md bg-zinc-950 border border-zinc-800 text-white px-3 focus:outline-none focus:ring-1 focus:ring-yellow-500">
-                  {ROLES.map((r) => <option key={r} value={r} className="capitalize">{r}</option>)}
-                </select>
+                <div className="space-y-1">
+                  <label className="text-xs text-zinc-400 font-medium">Full Name *</label>
+                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Ama Serwaa" required className="bg-zinc-950 border-zinc-800 text-white" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-zinc-400 font-medium">Username</label>
+                  <Input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} placeholder="e.g. aserwaa" className="bg-zinc-950 border-zinc-800 text-white" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-zinc-400 font-medium">Email (Login ID) *</label>
+                  <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="e.g. ama@store.com" type="email" required className="bg-zinc-950 border-zinc-800 text-white" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-zinc-400 font-medium">Phone</label>
+                  <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="e.g. 0244-123-456" className="bg-zinc-950 border-zinc-800 text-white" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-zinc-400 font-medium">Password {editId ? '(leave blank to keep)' : '*'}</label>
+                  <Input value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder={editId ? 'New password (optional)' : 'Set a password'} type="password" required={!editId} className="bg-zinc-950 border-zinc-800 text-white" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-zinc-400 font-medium">Role</label>
+                  <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="h-10 rounded-md bg-zinc-950 border border-zinc-800 text-white px-3 focus:outline-none focus:ring-1 focus:ring-yellow-500">
+                    {ROLES.map((r) => <option key={r} value={r} className="capitalize">{r}</option>)}
+                  </select>
+                </div>
                 <div className="sm:col-span-2 lg:col-span-3 flex flex-wrap gap-2">
                   {PERMISSIONS.map((perm) => {
                     const active = form.permissions.includes(perm)
@@ -264,6 +301,34 @@ export default function EmployeesPage() {
                   </Card>
                 ))}
                 {filtered.length === 0 && <p className="text-zinc-500 col-span-full">No employees found.</p>}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2"><Mail className="h-5 w-5 text-yellow-500" /> Login Accounts</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-zinc-400 text-xs border-b border-zinc-800">
+                      <th className="text-left py-2 px-3">Name</th>
+                      <th className="text-left py-2 px-3">Login Email</th>
+                      <th className="text-left py-2 px-3">Role</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {listUsers().map((u) => (
+                      <tr key={u.email} className="border-b border-zinc-800/50">
+                        <td className="py-2 px-3 text-white">{u.name}</td>
+                        <td className="py-2 px-3 text-zinc-300 font-mono text-xs">{u.email}</td>
+                        <td className="py-2 px-3"><span className="text-yellow-500 capitalize">{u.role}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </CardContent>
           </Card>

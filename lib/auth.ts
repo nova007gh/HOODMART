@@ -134,3 +134,8 @@ export function hasPermission(user: User | null, permission: string): boolean {
   if (user.role === 'admin') return true
   return user.permissions?.includes(permission) ?? false
 }
+
+export function listUsers(): { email: string; name: string; role: string }[] {
+  const users = getUsers()
+  return Object.entries(users).map(([email, u]) => ({ email, name: u.name, role: u.role }))
+}

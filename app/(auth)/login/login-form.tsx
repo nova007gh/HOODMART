@@ -152,6 +152,11 @@ export default function LoginForm() {
                   {isRegister ? 'Log in' : 'Register now'}
                 </button>
               </p>
+              {!isRegister && (
+                <p className="text-xs text-zinc-600">
+                  Default admin: <span className="text-zinc-400 font-mono">nova@gmail.com</span> / <span className="text-zinc-400 font-mono">qwerty123</span>
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
