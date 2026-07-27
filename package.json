@@ -16,7 +16,11 @@
     "mobile:android": "capacitor run android",
     "mobile:ios": "capacitor run ios",
     "desktop": "electron .",
-    "desktop:build": "electron-builder"
+    "desktop:dev": "concurrently \"next dev\" \"sleep 3 && electron .\"",
+    "desktop:build": "next build && electron-builder",
+    "desktop:mac": "next build && electron-builder --mac",
+    "desktop:win": "next build && electron-builder --win",
+    "desktop:linux": "next build && electron-builder --linux"
   },
   "dependencies": {
     "next": "14.1.4",
@@ -63,24 +67,53 @@
     "@radix-ui/react-slot": "^1.1.0",
     "@tanstack/react-query-devtools": "^5.51.1"
   },
+  "main": "main.js",
   "build": {
     "appId": "com.emdpos.retail.next",
-    "productName": "EMDPOS Retail OS 2.0",
+    "productName": "EMDPOS Retail OS",
     "directories": {
-      "output": "dist"
+      "output": "dist",
+      "buildResources": "build-resources"
     },
     "files": [
-      "out/**/*",
       "main.js",
-      "preload.js"
+      "preload.js",
+      ".next/**/*",
+      "public/**/*",
+      "node_modules/**/*",
+      "package.json",
+      "next.config.js"
     ],
+    "extraMetadata": {
+      "main": "main.js"
+    },
+    "mac": {
+      "target": [
+        { "target": "dmg", "arch": ["x64", "arm64"] },
+        { "target": "zip", "arch": ["x64", "arm64"] }
+      ],
+      "category": "public.app-category.business",
+      "icon": "build-resources/icon.svg"
+    },
     "win": {
       "target": [
-        {
-          "target": "nsis",
-          "arch": ["x64"]
-        }
-      ]
+        { "target": "nsis", "arch": ["x64"] }
+      ],
+      "icon": "build-resources/icon.svg"
+    },
+    "linux": {
+      "target": [
+        { "target": "AppImage", "arch": ["x64"] }
+      ],
+      "category": "Office",
+      "icon": "build-resources/icon.svg"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "EMDPOS Retail OS"
     }
   }
 }
