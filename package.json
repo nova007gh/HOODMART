@@ -93,20 +93,20 @@
         { "target": "zip", "arch": ["x64", "arm64"] }
       ],
       "category": "public.app-category.business",
-      "icon": "build-resources/icon.svg"
+      "icon": "build-resources/icon.png"
     },
     "win": {
       "target": [
         { "target": "nsis", "arch": ["x64"] }
       ],
-      "icon": "build-resources/icon.svg"
+      "icon": "build-resources/icon.png"
     },
     "linux": {
       "target": [
         { "target": "AppImage", "arch": ["x64"] }
       ],
       "category": "Office",
-      "icon": "build-resources/icon.svg"
+      "icon": "build-resources/icon.png"
     },
     "nsis": {
       "oneClick": false,
