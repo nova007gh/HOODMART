@@ -12,13 +12,13 @@ export function useAuth() {
     setLoading(false)
   }, [])
 
-  const logout = () => {
-    doLogout()
+  const logout = async () => {
+    await doLogout()
     setSession(null)
   }
 
-  const login = (email: string, password: string): boolean => {
-    const s = doLogin(email, password)
+  const login = async (email: string, password: string): Promise<boolean> => {
+    const s = await doLogin(email, password)
     if (s) {
       setSession(s)
       return true

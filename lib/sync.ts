@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
+import { getStoreId } from '@/lib/auth'
 
 const KEYS = {
   PRODUCTS: 'emdpos_v2_products',
@@ -63,8 +64,10 @@ function setPending(v: PendingChange[]) {
 
 function stamp(payload: any) {
   if (!payload || typeof payload !== 'object') return payload
+  const storeId = getStoreId()
   return {
     ...payload,
+    store_id: storeId || undefined,
     device_id: getDeviceId(),
     updated_at: new Date().toISOString(),
   }
@@ -134,9 +137,12 @@ const TABLES = [
 
 export async function pullRemote(): Promise<void> {
   if (!isSupabaseConfigured() || !isOnline() || !supabase) return
+  const storeId = getStoreId()
   for (const { table, key } of TABLES) {
     try {
-      const { data, error } = await supabase.from(table).select('*')
+      let query = supabase.from(table).select('*')
+      if (storeId) query = query.eq('store_id', storeId)
+      const { data, error } = await query
       if (error) throw error
       if (Array.isArray(data)) set(key, data as any)
     } catch {

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { login, register, listUsers } from '@/lib/auth'
+import { isSupabaseConfigured } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,6 +18,7 @@ export default function LoginForm() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [storeName, setStoreName] = useState('')
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
@@ -25,28 +27,32 @@ export default function LoginForm() {
 
   const isRegister = mode === 'register' || search.get('register') === '1'
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
 
     if (isRegister) {
-      const ok = register(email, password, name || email, 'cashier', ['process_sales'])
-      if (ok) {
+      const result = await register(email, password, storeName || name || email, 'admin', ['*'])
+      if (result.ok) {
         toast.success('Account created! Welcome to EMDPOS.')
         router.push('/dashboard')
       } else {
-        setError('An account with this email already exists.')
+        setError(result.error || 'Registration failed')
       }
     } else {
-      const success = login(email, password)
-      if (success) {
+      const session = await login(email, password)
+      if (session) {
         toast.success('Welcome back to EMDPOS!')
         router.push('/dashboard')
       } else {
-        const users = listUsers()
-        const knownEmails = users.map((u) => u.email).join(', ')
-        setError(`Invalid email or password. Registered accounts: ${knownEmails || 'none'}`)
+        if (isSupabaseConfigured()) {
+          setError('Invalid email or password.')
+        } else {
+          const users = listUsers()
+          const knownEmails = users.map((u) => u.email).join(', ')
+          setError(`Invalid email or password. Registered accounts: ${knownEmails || 'none'}`)
+        }
       }
     }
 
@@ -83,15 +89,29 @@ export default function LoginForm() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {isRegister && (
                 <div className="space-y-2">
-                  <Label className="text-zinc-300">Store / Name</Label>
+                  <Label className="text-zinc-300">Store Name</Label>
+                  <div className="relative">
+                    <Store className="absolute left-3 top-3 h-4 w-4 text-zinc-400" />
+                    <Input
+                      value={storeName}
+                      onChange={(e) => setStoreName(e.target.value)}
+                      placeholder="e.g. HOODMARD Enterprise"
+                      className="pl-10 bg-zinc-900 border-zinc-700 text-white placeholder-zinc-500"
+                      required={isRegister}
+                    />
+                  </div>
+                </div>
+              )}
+              {isRegister && (
+                <div className="space-y-2">
+                  <Label className="text-zinc-300">Your Name</Label>
                   <div className="relative">
                     <UserPlus className="absolute left-3 top-3 h-4 w-4 text-zinc-400" />
                     <Input
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="Your store name"
+                      placeholder="Your full name"
                       className="pl-10 bg-zinc-900 border-zinc-700 text-white placeholder-zinc-500"
-                      required={isRegister}
                     />
                   </div>
                 </div>
@@ -154,7 +174,7 @@ export default function LoginForm() {
                   {isRegister ? 'Log in' : 'Register now'}
                 </button>
               </p>
-              {!isRegister && (
+              {!isRegister && !isSupabaseConfigured() && (
                 <p className="text-xs text-zinc-600">
                   Default admin: <span className="text-zinc-400 font-mono">nova@gmail.com</span> / <span className="text-zinc-400 font-mono">qwerty123</span>
                 </p>

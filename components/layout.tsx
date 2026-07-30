@@ -55,15 +55,21 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [storeName, setStoreName] = useState('EMDPOS')
 
   useEffect(() => {
-    try {
-      setStoreName(localStorage.getItem('emdpos_store_name') || 'EMDPOS')
-    } catch {
-      setStoreName('EMDPOS')
+    const name = session?.user?.name
+    if (name) {
+      setStoreName(name)
+      try { localStorage.setItem('emdpos_store_name', name) } catch {}
+    } else {
+      try {
+        setStoreName(localStorage.getItem('emdpos_store_name') || 'EMDPOS')
+      } catch {
+        setStoreName('EMDPOS')
+      }
     }
-  }, [])
+  }, [session])
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await logout()
     router.push('/login')
   }
 
