@@ -143,10 +143,13 @@ export async function pullRemote(): Promise<void> {
       let query = supabase.from(table).select('*')
       if (storeId) query = query.eq('store_id', storeId)
       const { data, error } = await query
-      if (error) throw error
+      if (error) {
+        console.warn(`Sync pull error for ${table}:`, error.message)
+        continue
+      }
       if (Array.isArray(data)) set(key, data as any)
-    } catch {
-      // leave local copy unchanged on any remote error
+    } catch (e) {
+      console.warn(`Sync pull failed for ${table}:`, e)
     }
   }
   set(LAST_SYNC_KEY, new Date().toISOString())

@@ -69,22 +69,44 @@ export async function register(email: string, password: string, name: string, ro
         password,
         options: { data: { store_name: name || normalized } }
       })
-      if (error) return { ok: false, error: error.message }
-      if (!data.user) return { ok: false, error: 'Registration failed' }
+      if (error) return { ok: false, error: error.message || JSON.stringify(error) }
+      if (!data.user) return { ok: false, error: 'Registration failed - no user returned' }
 
-      // Fetch the store_id from store_members
+      // If email confirmation is required, data.session will be null
+      // but data.user still exists. We proceed either way.
+      // The store trigger should have already created the store.
+
+      // Fetch the store_id and store name from store_members + stores
       let storeId: string | undefined
+      let storeName: string | undefined
       try {
-        const { data: memberData } = await supabase
+        const { data: memberData, error: memberError } = await supabase
           .from('store_members')
-          .select('store_id')
+          .select('store_id, stores(name)')
           .eq('user_id', data.user.id)
           .single()
+        if (memberError) {
+          console.warn('store_members query error:', memberError)
+        }
         storeId = memberData?.store_id
-      } catch {}
+        storeName = (memberData as any)?.stores?.name
+      } catch (e) {
+        console.warn('Could not fetch store_id:', e)
+      }
 
+      // Update the store name if the trigger used the email as fallback
+      if (storeId && storeName && storeName !== name) {
+        try {
+          await supabase.from('stores').update({ name }).eq('id', storeId)
+          storeName = name
+        } catch (e) {
+          console.warn('Could not update store name:', e)
+        }
+      }
+
+      const displayName = storeName || name
       const session: Session = {
-        user: { email: normalized, name, role, permissions, storeId },
+        user: { email: normalized, name: displayName, role, permissions, storeId },
         loggedInAt: Date.now(),
         storeId,
       }
@@ -158,18 +180,20 @@ export async function login(email: string, password: string): Promise<Session | 
       })
       if (error || !data.user) return null
 
-      // Fetch store_id
+      // Fetch store_id and store name
       let storeId: string | undefined
+      let storeName: string | undefined
       try {
         const { data: memberData } = await supabase
           .from('store_members')
-          .select('store_id')
+          .select('store_id, stores(name)')
           .eq('user_id', data.user.id)
           .single()
         storeId = memberData?.store_id
+        storeName = (memberData as any)?.stores?.name
       } catch {}
 
-      const name = data.user.user_metadata?.store_name || data.user.email?.split('@')[0] || 'Store Owner'
+      const name = storeName || data.user.user_metadata?.store_name || data.user.email?.split('@')[0] || 'Store Owner'
       const session: Session = {
         user: { email: normalized, name, role: 'admin', permissions: ['*'], storeId },
         loggedInAt: Date.now(),
