@@ -1,6 +1,16 @@
 import jsPDF from 'jspdf'
 import { formatDate, formatDateTime } from '@/lib/utils'
-import { money, type Sale } from '@/lib/store'
+import { type Sale } from '@/lib/store'
+
+// jsPDF's built-in helvetica font uses WinAnsi encoding and cannot render the
+// Ghana Cedi sign (₵), which renders as garbled characters. Use a plain-text
+// "GHS" prefix for all currency values drawn inside PDFs instead.
+function money(n: number): string {
+  return 'GHS ' + Number(n).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+const PAGE_TOP = 20
+const PAGE_BOTTOM = 265
 
 export interface SalesReportData {
   label: string
@@ -141,66 +151,94 @@ function addTable(
   })
 
   const totalWidth = colWidths.reduce((a, b) => a + b, 0)
-  const totalHeight = headerHeight + rowHeights.reduce((a, b) => a + b, 0)
   const headerText = options.headerTextColor || textColor
 
-  // Header background
-  doc.setFillColor(...headerBg)
-  doc.rect(x, y, totalWidth, headerHeight, 'F')
+  const drawHeaderRow = (atY: number) => {
+    doc.setFillColor(...headerBg)
+    doc.rect(x, atY, totalWidth, headerHeight, 'F')
+    doc.setFont('helvetica', headerBold ? 'bold' : 'normal')
+    doc.setFontSize(headerFontSize)
+    doc.setTextColor(...headerText)
+    let cx = x
+    headers.forEach((h, i) => {
+      doc.text(h, cx + cellPadding, atY + headerHeight / 2 + headerFontSize / 3)
+      cx += colWidths[i]
+    })
+  }
 
-  // Header text
-  doc.setFont('helvetica', headerBold ? 'bold' : 'normal')
-  doc.setFontSize(headerFontSize)
-  doc.setTextColor(...headerText)
-  let cursorX = x
-  headers.forEach((h, i) => {
-    doc.text(h, cursorX + cellPadding, y + headerHeight / 2 + headerFontSize / 3)
-    cursorX += colWidths[i]
-  })
+  // If even the header doesn't fit, start on a fresh page first
+  if (y + headerHeight > PAGE_BOTTOM) {
+    doc.addPage()
+    fillPage(doc)
+    y = PAGE_TOP
+  }
 
-  // Rows
-  let cursorY = y + headerHeight
+  let cursorY = y
+  let segStartY = y
+  let segLines: number[] = []
+  const segments: { startY: number; lines: number[] }[] = []
+
+  drawHeaderRow(cursorY)
+  cursorY += headerHeight
+  segLines.push(cursorY)
+
   wrappedRows.forEach((row, ri) => {
+    const rh = rowHeights[ri]
+    if (cursorY + rh > PAGE_BOTTOM) {
+      segments.push({ startY: segStartY, lines: segLines })
+      doc.addPage()
+      fillPage(doc)
+      cursorY = PAGE_TOP
+      segStartY = cursorY
+      segLines = []
+      drawHeaderRow(cursorY)
+      cursorY += headerHeight
+      segLines.push(cursorY)
+    }
+
     const bg = ri % 2 === 0 ? rowBg : altRowBg
     doc.setFillColor(...bg)
-    doc.rect(x, cursorY, totalWidth, rowHeights[ri], 'F')
+    doc.rect(x, cursorY, totalWidth, rh, 'F')
 
     doc.setFont('helvetica', rowBold ? 'bold' : 'normal')
     doc.setFontSize(rowFontSize)
     doc.setTextColor(...textColor)
 
-    cursorX = x
+    let cx = x
     row.forEach((lines, i) => {
-      doc.text(lines as string[], cursorX + cellPadding, cursorY + cellPadding + rowFontSize * 0.8)
-      cursorX += colWidths[i]
+      doc.text(lines as string[], cx + cellPadding, cursorY + cellPadding + rowFontSize * 0.8)
+      cx += colWidths[i]
     })
 
-    cursorY += rowHeights[ri]
+    cursorY += rh
+    segLines.push(cursorY)
   })
+  segments.push({ startY: segStartY, lines: segLines })
 
-  // Borders
+  // Borders, drawn per page segment
   doc.setDrawColor(...borderColor)
   doc.setLineWidth(0.25)
-
-  // Outer border
-  doc.rect(x, y, totalWidth, totalHeight)
-
-  // Vertical lines
-  let vx = x
-  colWidths.slice(0, -1).forEach((w) => {
-    vx += w
-    doc.line(vx, y, vx, y + totalHeight)
+  segments.forEach((seg) => {
+    const segEndY = seg.lines[seg.lines.length - 1]
+    doc.rect(x, seg.startY, totalWidth, segEndY - seg.startY)
+    seg.lines.forEach((ly) => doc.line(x, ly, x + totalWidth, ly))
+    let vx = x
+    colWidths.slice(0, -1).forEach((w) => {
+      vx += w
+      doc.line(vx, seg.startY, vx, segEndY)
+    })
   })
 
-  // Horizontal lines
-  let hy = y + headerHeight
-  doc.line(x, hy, x + totalWidth, hy)
-  rowHeights.forEach((h) => {
-    hy += h
-    doc.line(x, hy, x + totalWidth, hy)
-  })
+  return cursorY
+}
 
-  return y + totalHeight
+function ensureRoom(doc: jsPDF, y: number, needed: number): number {
+  if (y + needed > PAGE_BOTTOM) {
+    doc.addPage()
+    fillPage(doc)
+    return PAGE_TOP
+  }
+  return y
 }
 
 function addSectionTitle(doc: jsPDF, text: string, x: number, y: number) {
@@ -213,7 +251,7 @@ function addSectionTitle(doc: jsPDF, text: string, x: number, y: number) {
 }
 
 function addTransactionList(doc: jsPDF, transactions: Sale[], startY: number): number {
-  let y = startY
+  let y = ensureRoom(doc, startY, 30)
 
   addSectionTitle(doc, 'Transactions', 14, y)
   y += 12
@@ -224,12 +262,6 @@ function addTransactionList(doc: jsPDF, transactions: Sale[], startY: number): n
     doc.setFontSize(11)
     doc.text('No transactions recorded for this period.', 14, y)
     return y + 12
-  }
-
-  if (y > 230) {
-    doc.addPage()
-    fillPage(doc)
-    y = 20
   }
 
   const headers = ['Date & Time', 'Items', 'Subtotal', 'Discount', 'Total']
@@ -255,12 +287,7 @@ function addTransactionList(doc: jsPDF, transactions: Sale[], startY: number): n
 }
 
 function addSummaryFooter(doc: jsPDF, startY: number, totalTransactions: number, totalSales: number): number {
-  let y = startY
-  if (y > 230) {
-    doc.addPage()
-    fillPage(doc)
-    y = 20
-  }
+  const y = ensureRoom(doc, startY, 34)
   return addTable(doc, 14, y, ['Total Transactions', 'Total Sales'], [[totalTransactions.toString(), money(totalSales)]], [90, 92], {
     headerFontSize: 10,
     rowFontSize: 14,
@@ -305,12 +332,7 @@ function addFooter(doc: jsPDF) {
 }
 
 function addBusinessAdvice(doc: jsPDF, data: SalesReportData, startY: number): number {
-  let y = startY
-  if (y > 230) {
-    doc.addPage()
-    fillPage(doc)
-    y = 20
-  }
+  let y = ensureRoom(doc, startY, 30)
 
   const tips: { text: string; color: 'green' | 'yellow' | 'red' | 'white' }[] = []
 
@@ -350,6 +372,10 @@ function addBusinessAdvice(doc: jsPDF, data: SalesReportData, startY: number): n
   }
 
   tips.forEach((tip) => {
+    const lines = doc.splitTextToSize(tip.text, 174)
+    const needed = 5.5 * (lines.length || 1) + 6
+    y = ensureRoom(doc, y, needed)
+
     const [r, g, b] = colorMap[tip.color]
     doc.setDrawColor(r, g, b)
     doc.setLineWidth(1.2)
@@ -358,21 +384,15 @@ function addBusinessAdvice(doc: jsPDF, data: SalesReportData, startY: number): n
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(50, 50, 50)
     doc.setFontSize(10)
-    const lines = doc.splitTextToSize(tip.text, 174)
     doc.text(lines, 20, y)
-    y += 5.5 * (lines.length || 1) + 6
+    y += needed
   })
 
   return y
 }
 
 function addInventoryAdvice(doc: jsPDF, data: InventoryReportData, startY: number): number {
-  let y = startY
-  if (y > 230) {
-    doc.addPage()
-    fillPage(doc)
-    y = 20
-  }
+  let y = ensureRoom(doc, startY, 30)
 
   const tips: { text: string; color: 'green' | 'yellow' | 'red' | 'white' }[] = []
 
@@ -408,6 +428,10 @@ function addInventoryAdvice(doc: jsPDF, data: InventoryReportData, startY: numbe
   }
 
   tips.forEach((tip) => {
+    const lines = doc.splitTextToSize(tip.text, 174)
+    const needed = 5.5 * (lines.length || 1) + 6
+    y = ensureRoom(doc, y, needed)
+
     const [r, g, b] = colorMap[tip.color]
     doc.setDrawColor(r, g, b)
     doc.setLineWidth(1.2)
@@ -416,9 +440,8 @@ function addInventoryAdvice(doc: jsPDF, data: InventoryReportData, startY: numbe
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(50, 50, 50)
     doc.setFontSize(10)
-    const lines = doc.splitTextToSize(tip.text, 174)
     doc.text(lines, 20, y)
-    y += 5.5 * (lines.length || 1) + 6
+    y += needed
   })
 
   return y
@@ -448,6 +471,7 @@ export function generateSalesPDF(data: SalesReportData) {
 
   // Payment method breakdown
   if (Object.keys(data.byPayment).length > 0) {
+    y = ensureRoom(doc, y, 30)
     addSectionTitle(doc, 'Payment Methods', 14, y)
     y += 8
     const rows = Object.entries(data.byPayment).map(([method, amount]) => [method.toUpperCase(), money(amount)])
@@ -457,6 +481,7 @@ export function generateSalesPDF(data: SalesReportData) {
 
   // Sales by day
   if (Object.keys(data.byDay).length > 0) {
+    y = ensureRoom(doc, y, 30)
     addSectionTitle(doc, 'Sales by Day', 14, y)
     y += 8
     const rows = Object.entries(data.byDay)
@@ -468,6 +493,7 @@ export function generateSalesPDF(data: SalesReportData) {
 
   // Top products
   if (data.topProducts.length > 0) {
+    y = ensureRoom(doc, y, 30)
     addSectionTitle(doc, 'Top Selling Products', 14, y)
     y += 8
     const rows = data.topProducts.map((p) => [p.name, p.qty.toString(), money(p.total)])
@@ -514,6 +540,7 @@ export function generateInventoryPDF(data: InventoryReportData) {
 
   if (hasAlerts) {
     if (data.lowStock.length > 0) {
+      y = ensureRoom(doc, y, 30)
       addSectionTitle(doc, 'Low Stock Items', 14, y)
       y += 8
       const rows = data.lowStock.map((p) => [p.name, p.stock.toString(), (p.minStock ?? 0).toString()])
@@ -522,6 +549,7 @@ export function generateInventoryPDF(data: InventoryReportData) {
     }
 
     if (data.outOfStock.length > 0) {
+      y = ensureRoom(doc, y, 30)
       addSectionTitle(doc, 'Out of Stock Items', 14, y)
       y += 8
       const rows = data.outOfStock.map((p) => [p.name])
@@ -530,6 +558,7 @@ export function generateInventoryPDF(data: InventoryReportData) {
     }
 
     if (data.expiring.length > 0 || data.expired.length > 0) {
+      y = ensureRoom(doc, y, 30)
       addSectionTitle(doc, 'Expiry Alerts', 14, y)
       y += 8
       const rows = [
