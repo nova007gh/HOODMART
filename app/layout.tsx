@@ -21,6 +21,18 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                var t = localStorage.getItem('emdpos_theme');
+                if (t === 'white') document.documentElement.classList.add('theme-white');
+              } catch (e) {}
+            `,
+          }}
+        />
+      </head>
       <body className={`${inter.className} bg-zinc-950 text-zinc-100`} suppressHydrationWarning>
         <Providers>
           {children}

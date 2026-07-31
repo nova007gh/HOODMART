@@ -95,12 +95,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
-        <div className="flex h-16 items-center justify-between px-6 border-b border-zinc-800 shrink-0">
+        <div className="flex h-16 items-center justify-between px-6 border-b border-yellow-500/20 shrink-0 bg-gradient-to-b from-yellow-500/5 to-transparent">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center gold-gradient rounded-lg">
+            <div className="flex h-9 w-9 items-center justify-center gold-gradient rounded-lg shadow-[0_0_15px_rgba(250,204,21,0.3)]">
               <Store className="h-5 w-5 text-black" />
             </div>
-            <span className="text-lg font-semibold text-white">{storeName}</span>
+            <span className="text-lg font-semibold gold-text tracking-wide">{storeName}</span>
           </div>
           <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-zinc-400 hover:text-white">
             ×
@@ -151,7 +151,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
       {/* Main content */}
       <main className="flex-1 min-w-0 flex flex-col min-h-screen">
-        <header className="sticky top-0 z-30 bg-zinc-900 border-b border-zinc-800 h-16 flex items-center justify-between px-4 sm:px-6 lg:px-8">
+        <header className="sticky top-0 z-30 bg-zinc-900 border-b border-yellow-500/20 h-16 flex items-center justify-between px-4 sm:px-6 lg:px-8">
           <button
             onClick={() => setSidebarOpen(true)}
             className="lg:hidden text-zinc-400 hover:text-white"

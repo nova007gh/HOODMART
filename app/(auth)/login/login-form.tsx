@@ -63,7 +63,7 @@ export default function LoginForm() {
           <p className="text-zinc-400">Retail OS — Gold Edition</p>
         </div>
 
-        <Card className="glass-card border-zinc-700/50">
+        <Card className="glass-card border-yellow-500/20 gold-frame">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl text-center text-white">
               {isRegister ? 'Create Account' : 'Welcome Back'}

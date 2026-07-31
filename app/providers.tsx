@@ -5,6 +5,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import * as sync from '@/lib/sync'
+import { getTheme, applyTheme } from '@/lib/theme'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -19,6 +20,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
         },
       })
   )
+
+  useEffect(() => {
+    applyTheme(getTheme())
+  }, [])
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {

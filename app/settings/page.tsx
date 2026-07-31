@@ -5,9 +5,10 @@ import { AuthGuard } from '@/components/auth-guard'
 import { DashboardLayout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Settings, Store, Bell, Lock, Download, Upload, Trash2, KeyRound, Users } from 'lucide-react'
+import { Settings, Store, Bell, Lock, Download, Upload, Trash2, KeyRound, Users, Palette, Sun, Moon } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { getSession, updateUser } from '@/lib/auth'
+import { getSession, updateUser, isAdmin } from '@/lib/auth'
+import { getTheme, setTheme, Theme } from '@/lib/theme'
 
 import { KEYS as STORE_KEYS } from '@/lib/store'
 
@@ -41,13 +42,24 @@ export default function SettingsPage() {
   const [lowStock, setLowStock] = useState(true)
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [theme, setThemeState] = useState<Theme>('gold')
+  const [userIsAdmin, setUserIsAdmin] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     setStoreName(localStorage.getItem('emdpos_store_name') || 'EMDPOS Store')
     setAddress(localStorage.getItem('emdpos_store_address') || '')
     setLowStock(localStorage.getItem('emdpos_low_stock') !== 'false')
+    setThemeState(getTheme())
+    const session = getSession()
+    setUserIsAdmin(isAdmin(session?.user ?? null))
   }, [])
+
+  const handleThemeChange = (t: Theme) => {
+    setTheme(t)
+    setThemeState(t)
+    toast.success(`Switched to ${t === 'gold' ? 'Gold' : 'White'} theme`)
+  }
 
   const save = (e: React.FormEvent) => {
     e.preventDefault()
@@ -118,6 +130,45 @@ export default function SettingsPage() {
               <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Store address" />
             </CardContent>
           </Card>
+
+          {userIsAdmin && (
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2"><Palette className="h-5 w-5 text-yellow-500" /> Appearance</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-zinc-400">Choose the app's color theme for all users of your store.</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleThemeChange('gold')}
+                    className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-all ${
+                      theme === 'gold' ? 'border-yellow-500 bg-yellow-500/10' : 'border-zinc-700 hover:border-zinc-600'
+                    }`}
+                  >
+                    <div className="h-10 w-10 rounded-full gold-gradient flex items-center justify-center">
+                      <Moon className="h-5 w-5 text-black" />
+                    </div>
+                    <span className="text-sm font-medium text-white">Gold & Black</span>
+                    {theme === 'gold' && <span className="text-xs text-yellow-500">Active</span>}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleThemeChange('white')}
+                    className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-all ${
+                      theme === 'white' ? 'border-yellow-500 bg-yellow-500/10' : 'border-zinc-700 hover:border-zinc-600'
+                    }`}
+                  >
+                    <div className="h-10 w-10 rounded-full bg-white border border-zinc-300 flex items-center justify-center">
+                      <Sun className="h-5 w-5 text-amber-500" />
+                    </div>
+                    <span className="text-sm font-medium text-white">White & Gold</span>
+                    {theme === 'white' && <span className="text-xs text-yellow-500">Active</span>}
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="glass-card">
             <CardHeader>
