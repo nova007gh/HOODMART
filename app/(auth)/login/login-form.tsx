@@ -2,15 +2,13 @@
 
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { login, register, listUsers } from '@/lib/auth'
-import { isSupabaseConfigured } from '@/lib/supabase/client'
+import { login, register } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Eye, EyeOff, Store, Lock, Mail, UserPlus } from 'lucide-react'
-import Link from 'next/link'
 import toast from 'react-hot-toast'
 
 export default function LoginForm() {
@@ -46,13 +44,7 @@ export default function LoginForm() {
         toast.success('Welcome back to EMDPOS!')
         router.push('/dashboard')
       } else {
-        if (isSupabaseConfigured()) {
-          setError('Invalid email or password.')
-        } else {
-          const users = listUsers()
-          const knownEmails = users.map((u) => u.email).join(', ')
-          setError(`Invalid email or password. Registered accounts: ${knownEmails || 'none'}`)
-        }
+        setError('Invalid email or password.')
       }
     }
 
@@ -174,26 +166,6 @@ export default function LoginForm() {
                   {isRegister ? 'Log in' : 'Register now'}
                 </button>
               </p>
-              {!isRegister && !isSupabaseConfigured() && (
-                <p className="text-xs text-zinc-600">
-                  Default admin: <span className="text-zinc-400 font-mono">nova@gmail.com</span> / <span className="text-zinc-400 font-mono">qwerty123</span>
-                </p>
-              )}
-              <button
-                type="button"
-                onClick={() => {
-                  if (confirm('This will clear all local data and reset the app. Continue?')) {
-                    localStorage.clear()
-                    if ('serviceWorker' in navigator) {
-                      navigator.serviceWorker.getRegistrations().then((regs) => regs.forEach((r) => r.unregister()))
-                    }
-                    window.location.reload()
-                  }
-                }}
-                className="text-xs text-zinc-600 hover:text-red-400 transition-colors"
-              >
-                Reset app data
-              </button>
             </div>
           </CardContent>
         </Card>

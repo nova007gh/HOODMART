@@ -1,12 +1,4 @@
 import * as sync from './sync'
-import {
-  sqlProducts,
-  sqlActivities,
-  sqlCustomers,
-  sqlEmployees,
-  sqlSuppliers,
-  sqlSales,
-} from './seed-data'
 
 export interface Product {
   id: string
@@ -227,17 +219,6 @@ function uuid() {
 function seedIfNeeded() {
   if (typeof window === 'undefined') return
   if (get(SEED_KEY, false)) return
-  const seedItems: [string, any][] = [
-    [KEYS.PRODUCTS, sqlProducts],
-    [KEYS.ACTIVITIES, sqlActivities],
-    [KEYS.CUSTOMERS, sqlCustomers],
-    [KEYS.EMPLOYEES, sqlEmployees],
-    [KEYS.SUPPLIERS, sqlSuppliers],
-    [KEYS.SALES, sqlSales],
-  ]
-  for (const [key, data] of seedItems) {
-    set(key, data)
-  }
   set(SEED_KEY, true)
 }
 
