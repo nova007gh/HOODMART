@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { store, Employee } from '@/lib/store'
-import { createUser, updateUser, deleteUser, getSession, isAdmin, listUsers } from '@/lib/auth'
+import { createUser, updateUser, deleteUser, getSession, isAdmin } from '@/lib/auth'
 import { Users, Search, User, Mail, Phone, Shield, Pencil, Trash2, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -90,7 +90,7 @@ export default function EmployeesPage() {
     }))
   }
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.name) return toast.error('Name is required')
     if (!form.email) return toast.error('Email is required')
@@ -114,8 +114,8 @@ export default function EmployeesPage() {
       toast.success('Employee updated')
     } else {
       if (!form.password) return toast.error('Password is required for new employee')
-      const created = createUser(form.email, form.password, form.name, form.role, form.permissions)
-      if (!created) return toast.error('An account with that email already exists')
+      const created = await createUser(form.email, form.password, form.name, form.role, form.permissions)
+      if (!created) return toast.error('Failed to create employee account. That email may already be registered.')
       store.addEmployee({
         name: form.name,
         username: form.username,
@@ -306,33 +306,6 @@ export default function EmployeesPage() {
             </CardContent>
           </Card>
 
-          <Card className="glass-card">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2"><Mail className="h-5 w-5 text-yellow-500" /> Login Accounts</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-zinc-400 text-xs border-b border-zinc-800">
-                      <th className="text-left py-2 px-3">Name</th>
-                      <th className="text-left py-2 px-3">Login Email</th>
-                      <th className="text-left py-2 px-3">Role</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {listUsers().map((u) => (
-                      <tr key={u.email} className="border-b border-zinc-800/50">
-                        <td className="py-2 px-3 text-white">{u.name}</td>
-                        <td className="py-2 px-3 text-zinc-300 font-mono text-xs">{u.email}</td>
-                        <td className="py-2 px-3"><span className="text-yellow-500 capitalize">{u.role}</span></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </DashboardLayout>
       </PermissionGuard>

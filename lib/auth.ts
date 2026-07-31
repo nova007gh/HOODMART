@@ -23,18 +23,10 @@ function getUsers(): Record<string, StoredUser> {
   if (typeof window === 'undefined') return {}
   try {
     const raw = localStorage.getItem(USERS_KEY)
-    if (!raw) {
-      // First time: seed default admin
-      const defaultAdmin: Record<string, StoredUser> = {
-        'nova@gmail.com': { password: 'qwerty123', name: 'Nova Admin', role: 'admin', permissions: ['*'] },
-      }
-      saveUsers(defaultAdmin)
-      return defaultAdmin
-    }
+    if (!raw) return {}
     const users = JSON.parse(raw) as Record<string, StoredUser>
     return users
   } catch {
-    // If JSON is corrupted, try to preserve whatever we can
     return {}
   }
 }
@@ -132,21 +124,43 @@ export async function register(email: string, password: string, name: string, ro
   return { ok: true }
 }
 
-export function createUser(email: string, password: string, name: string, role: string = 'cashier', permissions: string[] = []): boolean {
+export async function createUser(email: string, password: string, name: string, role: string = 'cashier', permissions: string[] = []): Promise<boolean> {
   const normalized = email.trim().toLowerCase()
   if (!normalized || !password) return false
+
+  // If Supabase is configured, create auth user via API route
+  if (isSupabaseConfigured()) {
+    try {
+      const session = getSession()
+      const storeId = session?.storeId || session?.user?.storeId
+      if (!storeId) {
+        console.error('createUser: No storeId in session')
+        return false
+      }
+      const res = await fetch('/api/create-employee', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: normalized, password, name, role, permissions, storeId }),
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) {
+        console.error('createUser API error:', data.error)
+        return false
+      }
+      return true
+    } catch (err) {
+      console.error('createUser: fetch failed:', err)
+      return false
+    }
+  }
+
+  // Fallback: localStorage auth
   const users = getUsers()
   if (users[normalized]) return false
   users[normalized] = { password, name, role, permissions }
   const saved = saveUsers(users)
   if (!saved) {
     console.error('createUser: saveUsers failed for', normalized)
-    return false
-  }
-  // Verify the user can be found immediately after saving
-  const verify = getUsers()
-  if (!verify[normalized]) {
-    console.error('createUser: verification failed - user not found after save')
     return false
   }
   return true
@@ -180,22 +194,33 @@ export async function login(email: string, password: string): Promise<Session | 
       })
       if (error || !data.user) return null
 
-      // Fetch store_id and store name
+      // Fetch store_id, store name, role, and permissions from store_members
       let storeId: string | undefined
       let storeName: string | undefined
+      let role = 'admin'
+      let permissions: string[] = ['*']
       try {
         const { data: memberData } = await supabase
           .from('store_members')
-          .select('store_id, stores(name)')
+          .select('store_id, role, permissions, stores(name)')
           .eq('user_id', data.user.id)
           .single()
-        storeId = memberData?.store_id
-        storeName = (memberData as any)?.stores?.name
+        if (memberData) {
+          storeId = memberData.store_id
+          storeName = (memberData as any)?.stores?.name
+          role = memberData.role || 'admin'
+          const perms = memberData.permissions
+          if (Array.isArray(perms)) {
+            permissions = perms
+          } else if (typeof perms === 'string') {
+            try { permissions = JSON.parse(perms) } catch {}
+          }
+        }
       } catch {}
 
-      const name = storeName || data.user.user_metadata?.store_name || data.user.email?.split('@')[0] || 'Store Owner'
+      const name = storeName || data.user.user_metadata?.store_name || data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'Store Owner'
       const session: Session = {
-        user: { email: normalized, name, role: 'admin', permissions: ['*'], storeId },
+        user: { email: normalized, name, role, permissions, storeId },
         loggedInAt: Date.now(),
         storeId,
       }
