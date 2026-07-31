@@ -61,12 +61,15 @@ export async function register(email: string, password: string, name: string, ro
         password,
         options: { data: { store_name: name || normalized } }
       })
-      if (error) return { ok: false, error: error.message || JSON.stringify(error) }
+      if (error) return { ok: false, error: error.message || JSON.stringify(error) || 'Sign up failed' }
       if (!data.user) return { ok: false, error: 'Registration failed - no user returned' }
 
       // If email confirmation is required, data.session will be null
       // but data.user still exists. We proceed either way.
       // The store trigger should have already created the store.
+
+      // Wait briefly for the trigger to complete
+      await new Promise((r) => setTimeout(r, 500))
 
       // Fetch the store_id and store name from store_members + stores
       let storeId: string | undefined

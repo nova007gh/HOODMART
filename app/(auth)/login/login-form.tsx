@@ -36,7 +36,8 @@ export default function LoginForm() {
         toast.success('Account created! Welcome to EMDPOS.')
         router.push('/dashboard')
       } else {
-        setError(result.error || 'Registration failed')
+        const errMsg = result.error && result.error !== '{}' ? result.error : 'Registration failed. Please try again.'
+        setError(errMsg)
       }
     } else {
       const session = await login(email, password)
