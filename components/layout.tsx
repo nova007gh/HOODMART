@@ -26,6 +26,9 @@ import {
   Briefcase,
   Truck,
   Activity,
+  Gift,
+  Receipt,
+  FileText,
 } from 'lucide-react'
 
 const navigation = [
@@ -40,6 +43,9 @@ const navigation = [
   { name: 'Branches', href: '/branches', icon: Store, perm: 'manage_branches' },
   { name: 'Sales', href: '/sales', icon: CreditCard, perm: null },
   { name: 'Returns', href: '/returns', icon: Undo2, perm: 'process_sales' },
+  { name: 'Quotations', href: '/quotations', icon: FileText, perm: null },
+  { name: 'Gift Cards', href: '/gift-cards', icon: Gift, perm: null },
+  { name: 'Expenses', href: '/expenses', icon: Receipt, perm: null },
   { name: 'Discounts', href: '/discounts', icon: Tag, perm: 'manage_discounts' },
   { name: 'Labels', href: '/labels', icon: TagIcon, perm: 'manage_products' },
   { name: 'Reports', href: '/reports', icon: BarChart3, perm: 'view_reports' },

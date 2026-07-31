@@ -134,6 +134,56 @@ export interface Branch {
   status: 'active' | 'inactive'
 }
 
+export interface GiftCard {
+  id: string
+  code: string
+  balance: number
+  initialBalance: number
+  status: 'active' | 'used' | 'expired' | 'disabled'
+  customerName?: string
+  customerEmail?: string
+  expiryDate?: string
+  notes?: string
+  createdAt: string
+  transactions: GiftCardTransaction[]
+}
+
+export interface GiftCardTransaction {
+  id: string
+  type: 'issue' | 'topup' | 'redeem' | 'refund'
+  amount: number
+  balanceAfter: number
+  date: string
+  note?: string
+}
+
+export interface Expense {
+  id: string
+  description: string
+  amount: number
+  category: string
+  date: string
+  paymentMethod?: 'cash' | 'card' | 'mobile'
+  vendor?: string
+  notes?: string
+}
+
+export interface Quotation {
+  id: string
+  quoteNumber: string
+  customerName: string
+  customerEmail?: string
+  customerPhone?: string
+  items: CartItem[]
+  subtotal: number
+  discount: number
+  total: number
+  status: 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired'
+  validUntil: string
+  notes?: string
+  createdAt: string
+}
+
 export const KEYS = {
   PRODUCTS: 'emdpos_v2_products',
   DISCOUNTS: 'emdpos_v2_discounts',
@@ -144,6 +194,9 @@ export const KEYS = {
   ACTIVITIES: 'emdpos_v2_activities',
   EMPLOYEES: 'emdpos_v2_employees',
   SUPPLIERS: 'emdpos_v2_suppliers',
+  GIFT_CARDS: 'emdpos_v2_gift_cards',
+  EXPENSES: 'emdpos_v2_expenses',
+  QUOTATIONS: 'emdpos_v2_quotations',
 }
 
 const SEED_KEY = 'emdpos_v2_seeded'
@@ -348,6 +401,155 @@ export const store = {
     }
   },
   getBranch: (id: string) => store.getBranches().find((b) => b.id === id),
+
+  getGiftCards: (): GiftCard[] => get(KEYS.GIFT_CARDS, []),
+  setGiftCards: (v: GiftCard[]) => set(KEYS.GIFT_CARDS, v),
+  addGiftCard: (g: Omit<GiftCard, 'id' | 'code' | 'createdAt' | 'transactions'>) => {
+    const giftCards = store.getGiftCards()
+    const code = 'GC-' + Date.now().toString(36).toUpperCase().slice(-6) + Math.random().toString(36).toUpperCase().slice(-2)
+    const now = new Date().toISOString()
+    const giftCard: GiftCard = {
+      ...g,
+      id: uuid(),
+      code,
+      createdAt: now,
+      transactions: [{
+        id: uuid(),
+        type: 'issue',
+        amount: g.initialBalance,
+        balanceAfter: g.initialBalance,
+        date: now,
+      }],
+    }
+    giftCards.unshift(giftCard)
+    store.setGiftCards(giftCards)
+    sync.pushLocalChange('gift_cards', giftCard)
+    return giftCard
+  },
+  updateGiftCard: (id: string, g: Partial<GiftCard>) => {
+    const giftCards = store.getGiftCards()
+    const idx = giftCards.findIndex((x) => x.id === id)
+    if (idx >= 0) {
+      giftCards[idx] = { ...giftCards[idx], ...g }
+      store.setGiftCards(giftCards)
+      sync.pushLocalChange('gift_cards', giftCards[idx])
+    }
+  },
+  deleteGiftCard: (id: string) => {
+    store.setGiftCards(store.getGiftCards().filter((x) => x.id !== id))
+    sync.pushLocalChange('gift_cards', { id }, 'delete')
+  },
+  topUpGiftCard: (id: string, amount: number) => {
+    const giftCards = store.getGiftCards()
+    const idx = giftCards.findIndex((x) => x.id === id)
+    if (idx >= 0) {
+      const gc = giftCards[idx]
+      gc.balance += amount
+      gc.transactions.push({
+        id: uuid(),
+        type: 'topup',
+        amount,
+        balanceAfter: gc.balance,
+        date: new Date().toISOString(),
+      })
+      store.setGiftCards(giftCards)
+      sync.pushLocalChange('gift_cards', gc)
+    }
+  },
+  redeemGiftCard: (id: string, amount: number): boolean => {
+    const giftCards = store.getGiftCards()
+    const idx = giftCards.findIndex((x) => x.id === id)
+    if (idx < 0) return false
+    const gc = giftCards[idx]
+    if (gc.balance < amount || gc.status !== 'active') return false
+    gc.balance -= amount
+    if (gc.balance <= 0) gc.status = 'used'
+    gc.transactions.push({
+      id: uuid(),
+      type: 'redeem',
+      amount,
+      balanceAfter: gc.balance,
+      date: new Date().toISOString(),
+    })
+    store.setGiftCards(giftCards)
+    sync.pushLocalChange('gift_cards', gc)
+    return true
+  },
+  findGiftCardByCode: (code: string): GiftCard | undefined => {
+    return store.getGiftCards().find((x) => x.code.toUpperCase() === code.toUpperCase())
+  },
+
+  getExpenses: (): Expense[] => get(KEYS.EXPENSES, []),
+  setExpenses: (v: Expense[]) => set(KEYS.EXPENSES, v),
+  addExpense: (e: Omit<Expense, 'id'>) => {
+    const expenses = store.getExpenses()
+    const expense = { ...e, id: uuid() } as Expense
+    expenses.unshift(expense)
+    store.setExpenses(expenses)
+    sync.pushLocalChange('expenses', expense)
+  },
+  updateExpense: (id: string, e: Partial<Expense>) => {
+    const expenses = store.getExpenses()
+    const idx = expenses.findIndex((x) => x.id === id)
+    if (idx >= 0) {
+      expenses[idx] = { ...expenses[idx], ...e }
+      store.setExpenses(expenses)
+      sync.pushLocalChange('expenses', expenses[idx])
+    }
+  },
+  deleteExpense: (id: string) => {
+    store.setExpenses(store.getExpenses().filter((x) => x.id !== id))
+    sync.pushLocalChange('expenses', { id }, 'delete')
+  },
+
+  getQuotations: (): Quotation[] => get(KEYS.QUOTATIONS, []),
+  setQuotations: (v: Quotation[]) => set(KEYS.QUOTATIONS, v),
+  addQuotation: (q: Omit<Quotation, 'id' | 'quoteNumber' | 'createdAt'>) => {
+    const quotations = store.getQuotations()
+    const num = quotations.length + 1
+    const quoteNumber = 'Q-' + String(num).padStart(4, '0')
+    const quotation: Quotation = {
+      ...q,
+      id: uuid(),
+      quoteNumber,
+      createdAt: new Date().toISOString(),
+    }
+    quotations.unshift(quotation)
+    store.setQuotations(quotations)
+    sync.pushLocalChange('quotations', quotation)
+    return quotation
+  },
+  updateQuotation: (id: string, q: Partial<Quotation>) => {
+    const quotations = store.getQuotations()
+    const idx = quotations.findIndex((x) => x.id === id)
+    if (idx >= 0) {
+      quotations[idx] = { ...quotations[idx], ...q }
+      store.setQuotations(quotations)
+      sync.pushLocalChange('quotations', quotations[idx])
+    }
+  },
+  deleteQuotation: (id: string) => {
+    store.setQuotations(store.getQuotations().filter((x) => x.id !== id))
+    sync.pushLocalChange('quotations', { id }, 'delete')
+  },
+  convertQuotationToSale: (id: string): Sale | null => {
+    const quotation = store.getQuotations().find((x) => x.id === id)
+    if (!quotation) return null
+    const sale: Sale = {
+      id: uuid(),
+      items: quotation.items,
+      discount: quotation.discount,
+      subtotal: quotation.subtotal,
+      total: quotation.total,
+      timestamp: new Date().toISOString(),
+      customer: quotation.customerName,
+      paymentMethod: 'cash',
+      comment: `Converted from quotation ${quotation.quoteNumber}`,
+    }
+    store.addSale(sale)
+    store.updateQuotation(id, { status: 'accepted' })
+    return sale
+  },
 }
 
 export function money(n: number) {

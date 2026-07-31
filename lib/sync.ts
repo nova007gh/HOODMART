@@ -11,6 +11,9 @@ const KEYS = {
   EMPLOYEES: 'emdpos_v2_employees',
   SUPPLIERS: 'emdpos_v2_suppliers',
   ACTIVITIES: 'emdpos_v2_activities',
+  GIFT_CARDS: 'emdpos_v2_gift_cards',
+  EXPENSES: 'emdpos_v2_expenses',
+  QUOTATIONS: 'emdpos_v2_quotations',
 }
 
 const SYNC_KEY = 'emdpos_pending_sync'
@@ -133,6 +136,9 @@ const TABLES = [
   { table: 'employees', key: KEYS.EMPLOYEES },
   { table: 'suppliers', key: KEYS.SUPPLIERS },
   { table: 'activities', key: KEYS.ACTIVITIES },
+  { table: 'gift_cards', key: KEYS.GIFT_CARDS },
+  { table: 'expenses', key: KEYS.EXPENSES },
+  { table: 'quotations', key: KEYS.QUOTATIONS },
 ]
 
 export async function pullRemote(): Promise<void> {
