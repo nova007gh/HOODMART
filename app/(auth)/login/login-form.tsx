@@ -88,7 +88,7 @@ export default function LoginForm() {
                     <Input
                       value={storeName}
                       onChange={(e) => setStoreName(e.target.value)}
-                      placeholder="e.g. HOODMARD Enterprise"
+                      placeholder="Your store name"
                       className="pl-10 bg-zinc-900 border-zinc-700 text-white placeholder-zinc-500"
                       required={isRegister}
                     />
@@ -118,7 +118,7 @@ export default function LoginForm() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@store.com"
+                    placeholder="you@example.com"
                     className="pl-10 bg-zinc-900 border-zinc-700 text-white placeholder-zinc-500"
                     required
                   />
