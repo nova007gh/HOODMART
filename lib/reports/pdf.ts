@@ -38,42 +38,49 @@ function getStoreName(): string {
 }
 
 function addHeader(doc: jsPDF, title: string, period: string, shopName: string = 'EMDPOS Store') {
-  // Logo mark
-  doc.setFillColor(250, 204, 21)
-  doc.roundedRect(14, 10, 18, 18, 4, 4, 'F')
-  doc.setDrawColor(24, 24, 27)
+  // Gold banner across the top
+  doc.setFillColor(212, 160, 23)
+  doc.rect(0, 0, 210, 38, 'F')
+
+  // Logo mark (dark square on gold banner)
+  doc.setFillColor(24, 24, 27)
+  doc.roundedRect(14, 9, 18, 18, 4, 4, 'F')
+  doc.setDrawColor(250, 204, 21)
   doc.setLineWidth(1.5)
-  doc.line(18, 17, 30, 17)
-  doc.line(18, 22, 28, 22)
-  doc.line(18, 27, 26, 27)
+  doc.line(18, 16, 30, 16)
+  doc.line(18, 21, 28, 21)
+  doc.line(18, 26, 26, 26)
 
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(14)
-  doc.setTextColor(250, 204, 21)
-  doc.text(shopName, 36, 18)
+  doc.setFontSize(15)
+  doc.setTextColor(24, 24, 27)
+  doc.text(shopName, 36, 17)
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(8)
-  doc.setTextColor(161, 161, 170)
-  doc.text('Powered by EMDPOS Retail OS', 36, 25)
+  doc.setTextColor(60, 45, 10)
+  doc.text('Powered by EMDPOS Retail OS', 36, 24)
 
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(20)
-  doc.setTextColor(250, 204, 21)
-  doc.text(title.toUpperCase(), 14, 40)
+  doc.setFontSize(11)
+  doc.setTextColor(24, 24, 27)
+  const titleWidth = doc.getTextWidth(title.toUpperCase())
+  doc.text(title.toUpperCase(), 196 - titleWidth, 17)
 
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(10)
-  doc.setTextColor(161, 161, 170)
-  doc.text(`Period: ${period}`, 14, 48)
+  doc.setFontSize(9)
+  doc.setTextColor(60, 45, 10)
+  const periodText = `Period: ${period}`
+  const periodWidth = doc.getTextWidth(periodText)
+  doc.text(periodText, 196 - periodWidth, 24)
 
-  doc.setDrawColor(250, 204, 21)
-  doc.setLineWidth(0.6)
-  doc.line(14, 52, 196, 52)
+  const genText = `Generated: ${new Date().toLocaleDateString()}`
+  const genWidth = doc.getTextWidth(genText)
+  doc.text(genText, 196 - genWidth, 30)
 }
 
 function fillPage(doc: jsPDF) {
-  doc.setFillColor(24, 24, 27)
+  doc.setFillColor(255, 255, 255)
   doc.rect(0, 0, 210, 297, 'F')
 }
 
@@ -106,11 +113,11 @@ function addTable(
     rowFontSize = 9,
     headerBold = true,
     rowBold = false,
-    headerBg = [39, 39, 42],
-    rowBg = [24, 24, 27],
-    altRowBg = [24, 24, 27],
-    borderColor = [63, 63, 70],
-    textColor = [255, 255, 255],
+    headerBg = [212, 160, 23],
+    rowBg = [255, 255, 255],
+    altRowBg = [250, 247, 237],
+    borderColor = [225, 220, 200],
+    textColor = [40, 40, 40],
     minRowHeight = 10,
     cellPadding = 3,
   } = options
@@ -196,18 +203,24 @@ function addTable(
   return y + totalHeight
 }
 
+function addSectionTitle(doc: jsPDF, text: string, x: number, y: number) {
+  doc.setFillColor(212, 160, 23)
+  doc.rect(x, y - 4.5, 3, 6, 'F')
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(40, 40, 40)
+  doc.setFontSize(13)
+  doc.text(text, x + 6, y)
+}
+
 function addTransactionList(doc: jsPDF, transactions: Sale[], startY: number): number {
   let y = startY
 
-  doc.setFont('helvetica', 'bold')
-  doc.setTextColor(250, 204, 21)
-  doc.setFontSize(16)
-  doc.text('Transactions', 14, y)
+  addSectionTitle(doc, 'Transactions', 14, y)
   y += 12
 
   if (transactions.length === 0) {
     doc.setFont('helvetica', 'normal')
-    doc.setTextColor(161, 161, 170)
+    doc.setTextColor(120, 120, 120)
     doc.setFontSize(11)
     doc.text('No transactions recorded for this period.', 14, y)
     return y + 12
@@ -232,10 +245,10 @@ function addTransactionList(doc: jsPDF, transactions: Sale[], startY: number): n
     rowBold: false,
     minRowHeight: 14,
     cellPadding: 3,
-    headerBg: [250, 204, 21],
+    headerBg: [212, 160, 23],
     headerTextColor: [24, 24, 27],
-    textColor: [255, 255, 255],
-    borderColor: [255, 255, 255],
+    textColor: [40, 40, 40],
+    borderColor: [225, 220, 200],
   })
 
   return y + 6
@@ -252,10 +265,10 @@ function addSummaryFooter(doc: jsPDF, startY: number, totalTransactions: number,
     headerFontSize: 10,
     rowFontSize: 14,
     rowBold: true,
-    headerBg: [250, 204, 21],
+    headerBg: [212, 160, 23],
     headerTextColor: [24, 24, 27],
-    textColor: [255, 255, 255],
-    borderColor: [250, 204, 21],
+    textColor: [24, 24, 27],
+    borderColor: [212, 160, 23],
     minRowHeight: 24,
     cellPadding: 4,
   })
@@ -265,25 +278,29 @@ function addFooter(doc: jsPDF) {
   const phone = '0244-6475-10'
   const website = 'www.emdulab.com'
   const email = 'admin@emdulab.com'
-  const copyright = 'EMD POS 2026, All rights reserved. MDLab Enterprise.'
+  const copyright = 'EMD POS 2026, All rights reserved.'
 
   const pageCount = doc.getNumberOfPages()
   const pageWidth = doc.internal.pageSize.getWidth()
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i)
-    doc.setDrawColor(250, 204, 21)
+    doc.setDrawColor(212, 160, 23)
     doc.setLineWidth(0.3)
     doc.line(14, 276, 196, 276)
 
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(8)
-    doc.setTextColor(160, 160, 170)
+    doc.setTextColor(120, 120, 120)
 
     const contact = `Tel: ${phone} | ${website} | ${email}`
     const contactWidth = doc.getTextWidth(contact)
     const copyrightWidth = doc.getTextWidth(copyright)
     doc.text(contact, (pageWidth - contactWidth) / 2, 283)
     doc.text(copyright, (pageWidth - copyrightWidth) / 2, 289)
+
+    const pageLabel = `Page ${i} of ${pageCount}`
+    const pageLabelWidth = doc.getTextWidth(pageLabel)
+    doc.text(pageLabel, pageWidth - 14 - pageLabelWidth, 283)
   }
 }
 
@@ -322,17 +339,14 @@ function addBusinessAdvice(doc: jsPDF, data: SalesReportData, startY: number): n
     tips.push({ text: 'Sales are steady. Keep monitoring top products and customer buying patterns.', color: 'white' })
   }
 
-  doc.setFont('helvetica', 'bold')
-  doc.setTextColor(250, 204, 21)
-  doc.setFontSize(16)
-  doc.text('Business Insights & Future Advice', 14, y)
+  addSectionTitle(doc, 'Business Insights & Recommendations', 14, y)
   y += 12
 
   const colorMap: Record<string, [number, number, number]> = {
-    green: [34, 197, 94],
-    yellow: [250, 204, 21],
-    red: [239, 68, 68],
-    white: [255, 255, 255],
+    green: [22, 163, 74],
+    yellow: [180, 130, 10],
+    red: [220, 38, 38],
+    white: [90, 90, 90],
   }
 
   tips.forEach((tip) => {
@@ -342,7 +356,7 @@ function addBusinessAdvice(doc: jsPDF, data: SalesReportData, startY: number): n
     doc.line(14, y - 3, 14, y + 3)
 
     doc.setFont('helvetica', 'normal')
-    doc.setTextColor(255, 255, 255)
+    doc.setTextColor(50, 50, 50)
     doc.setFontSize(10)
     const lines = doc.splitTextToSize(tip.text, 174)
     doc.text(lines, 20, y)
@@ -383,17 +397,14 @@ function addInventoryAdvice(doc: jsPDF, data: InventoryReportData, startY: numbe
     }
   }
 
-  doc.setFont('helvetica', 'bold')
-  doc.setTextColor(250, 204, 21)
-  doc.setFontSize(16)
-  doc.text('Inventory Statistics & Business Advice', 14, y)
+  addSectionTitle(doc, 'Inventory Statistics & Recommendations', 14, y)
   y += 12
 
   const colorMap: Record<string, [number, number, number]> = {
-    green: [34, 197, 94],
-    yellow: [250, 204, 21],
-    red: [239, 68, 68],
-    white: [255, 255, 255],
+    green: [22, 163, 74],
+    yellow: [180, 130, 10],
+    red: [220, 38, 38],
+    white: [90, 90, 90],
   }
 
   tips.forEach((tip) => {
@@ -403,7 +414,7 @@ function addInventoryAdvice(doc: jsPDF, data: InventoryReportData, startY: numbe
     doc.line(14, y - 3, 14, y + 3)
 
     doc.setFont('helvetica', 'normal')
-    doc.setTextColor(255, 255, 255)
+    doc.setTextColor(50, 50, 50)
     doc.setFontSize(10)
     const lines = doc.splitTextToSize(tip.text, 174)
     doc.text(lines, 20, y)
@@ -421,26 +432,23 @@ export function generateSalesPDF(data: SalesReportData) {
 
   addHeader(doc, `${data.label} Sales Report`, periodText, shopName)
 
-  let y = 60
+  let y = 46
   y = addTable(doc, 14, y, ['Transactions', 'Revenue', 'Items Sold', 'Avg Order'], [[data.sales.toString(), money(data.revenue), data.itemsSold.toString(), money(data.avgOrderValue)]], [45, 45, 45, 45], {
     headerFontSize: 10,
     rowFontSize: 14,
     rowBold: true,
-    headerBg: [250, 204, 21],
+    headerBg: [212, 160, 23],
     headerTextColor: [24, 24, 27],
-    textColor: [255, 255, 255],
-    borderColor: [250, 204, 21],
+    textColor: [24, 24, 27],
+    borderColor: [212, 160, 23],
     minRowHeight: 24,
     cellPadding: 4,
   })
-  y += 10
+  y += 12
 
   // Payment method breakdown
   if (Object.keys(data.byPayment).length > 0) {
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(250, 204, 21)
-    doc.setFontSize(13)
-    doc.text('Payment Methods', 14, y)
+    addSectionTitle(doc, 'Payment Methods', 14, y)
     y += 8
     const rows = Object.entries(data.byPayment).map(([method, amount]) => [method.toUpperCase(), money(amount)])
     y = addTable(doc, 14, y, ['Method', 'Amount'], rows, [90, 92])
@@ -449,10 +457,7 @@ export function generateSalesPDF(data: SalesReportData) {
 
   // Sales by day
   if (Object.keys(data.byDay).length > 0) {
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(250, 204, 21)
-    doc.setFontSize(13)
-    doc.text('Sales by Day', 14, y)
+    addSectionTitle(doc, 'Sales by Day', 14, y)
     y += 8
     const rows = Object.entries(data.byDay)
       .sort((a, b) => a[0].localeCompare(b[0]))
@@ -463,10 +468,7 @@ export function generateSalesPDF(data: SalesReportData) {
 
   // Top products
   if (data.topProducts.length > 0) {
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(250, 204, 21)
-    doc.setFontSize(13)
-    doc.text('Top Selling Products', 14, y)
+    addSectionTitle(doc, 'Top Selling Products', 14, y)
     y += 8
     const rows = data.topProducts.map((p) => [p.name, p.qty.toString(), money(p.total)])
     y = addTable(doc, 14, y, ['Product', 'Qty', 'Revenue'], rows, [95, 40, 47])
@@ -494,28 +496,25 @@ export function generateInventoryPDF(data: InventoryReportData) {
   const shopName = getStoreName()
   addHeader(doc, 'Inventory Report', `Generated: ${data.generatedAt}`, shopName)
 
-  let y = 60
+  let y = 46
   y = addTable(doc, 14, y, ['Total SKUs', 'Total Stock', 'Inventory Value'], [[data.totalSkus.toString(), data.totalStock.toString(), money(data.inventoryValue)]], [60, 60, 60], {
     headerFontSize: 10,
     rowFontSize: 14,
     rowBold: true,
-    headerBg: [250, 204, 21],
+    headerBg: [212, 160, 23],
     headerTextColor: [24, 24, 27],
-    textColor: [255, 255, 255],
-    borderColor: [250, 204, 21],
+    textColor: [24, 24, 27],
+    borderColor: [212, 160, 23],
     minRowHeight: 24,
     cellPadding: 4,
   })
-  y += 10
+  y += 12
 
   const hasAlerts = data.lowStock.length || data.outOfStock.length || data.expiring.length || data.expired.length
 
   if (hasAlerts) {
     if (data.lowStock.length > 0) {
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(250, 204, 21)
-      doc.setFontSize(13)
-      doc.text('Low Stock Items', 14, y)
+      addSectionTitle(doc, 'Low Stock Items', 14, y)
       y += 8
       const rows = data.lowStock.map((p) => [p.name, p.stock.toString(), (p.minStock ?? 0).toString()])
       y = addTable(doc, 14, y, ['Product', 'Stock', 'Min Stock'], rows, [105, 38, 39])
@@ -523,10 +522,7 @@ export function generateInventoryPDF(data: InventoryReportData) {
     }
 
     if (data.outOfStock.length > 0) {
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(250, 204, 21)
-      doc.setFontSize(13)
-      doc.text('Out of Stock Items', 14, y)
+      addSectionTitle(doc, 'Out of Stock Items', 14, y)
       y += 8
       const rows = data.outOfStock.map((p) => [p.name])
       y = addTable(doc, 14, y, ['Product'], rows, [182])
@@ -534,10 +530,7 @@ export function generateInventoryPDF(data: InventoryReportData) {
     }
 
     if (data.expiring.length > 0 || data.expired.length > 0) {
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(250, 204, 21)
-      doc.setFontSize(13)
-      doc.text('Expiry Alerts', 14, y)
+      addSectionTitle(doc, 'Expiry Alerts', 14, y)
       y += 8
       const rows = [
         ...data.expiring.map((p) => [p.name, p.expiryDate, 'Expiring soon']),
@@ -548,7 +541,7 @@ export function generateInventoryPDF(data: InventoryReportData) {
     }
   } else {
     doc.setFont('helvetica', 'normal')
-    doc.setTextColor(161, 161, 170)
+    doc.setTextColor(120, 120, 120)
     doc.setFontSize(11)
     doc.text('No inventory data to display.', 14, y)
     y += 10
