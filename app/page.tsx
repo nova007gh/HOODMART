@@ -22,18 +22,23 @@ import {
 const BASIC_FEATURES = [
   'Point of Sale',
   'Inventory management',
-  'Sales reports',
+  'Sales & analytics reports',
   'Up to 2 employees',
+  'AI business assistant',
   'Email support',
 ]
 
 const PRO_FEATURES = [
   'Everything in Basic',
   'Unlimited employees',
-  'Advanced PDF reports',
+  'AI-powered sales insights & forecasting',
+  'AI smart restock suggestions',
+  'Advanced PDF & export reports',
   'Multi-branch support',
-  'Expense tracking',
-  'Priority support',
+  'Expense tracking & profit margins',
+  'Customer loyalty & gift cards',
+  'Supplier management',
+  'Priority WhatsApp support',
 ]
 
 export default function LandingPage() {
@@ -95,9 +100,9 @@ export default function LandingPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
                 { icon: ShoppingCart, title: 'Fast Checkout', desc: 'One-click product grid, cart, discounts, and receipt printing.' },
-                { icon: BarChart3, title: 'Sales Reports', desc: 'Detailed PDF reports to track and monitor business performance.' },
-                { icon: Store, title: 'Inventory', desc: 'Never run out of stock with real-time low-stock alerts.' },
-                { icon: Shield, title: 'Secure', desc: 'Role-based employee logins with full activity logging.' },
+                { icon: BarChart3, title: 'AI Sales Insights', desc: 'AI-powered analytics, forecasting, and smart business recommendations.' },
+                { icon: Store, title: 'Smart Inventory', desc: 'AI restock suggestions and real-time low-stock alerts.' },
+                { icon: Shield, title: 'Secure & Reliable', desc: 'Role-based employee logins, offline-ready, and encrypted data.' },
               ].map((f) => (
                 <div key={f.title} className="card-gold p-6 rounded-xl">
                   <f.icon className="h-8 w-8 text-yellow-500 mb-4" />
@@ -144,7 +149,7 @@ export default function LandingPage() {
                   <span className="text-4xl font-extrabold gold-text">GHS {PLAN_PRICE_GHS.pro}</span>
                   <span className="text-zinc-500 text-sm">/month</span>
                 </div>
-                <p className="text-xs text-zinc-500 mb-6">For growing and multi-branch businesses</p>
+                <p className="text-xs text-zinc-500 mb-6">AI-powered tools for growing & multi-branch businesses</p>
                 <ul className="space-y-3 flex-1 mb-8">
                   {PRO_FEATURES.map((f) => (
                     <li key={f} className="flex items-center gap-2 text-sm text-zinc-300">
