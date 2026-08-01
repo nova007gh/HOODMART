@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { hasPermission } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
+import { SubscriptionGuard, SubscriptionBanner } from '@/components/subscription-guard'
 import {
   Store,
   ShoppingCart,
@@ -50,6 +51,7 @@ const navigation = [
   { name: 'Labels', href: '/labels', icon: TagIcon, perm: 'manage_products' },
   { name: 'Reports', href: '/reports', icon: BarChart3, perm: 'view_reports' },
   { name: 'Intelligence', href: '/dashboard/assistant', icon: Brain, perm: null },
+  { name: 'Billing', href: '/billing', icon: CreditCard, perm: null },
   { name: 'Settings', href: '/settings', icon: Settings, perm: null },
 ]
 
@@ -151,6 +153,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
       {/* Main content */}
       <main className="flex-1 min-w-0 flex flex-col min-h-screen">
+        <SubscriptionBanner />
         <header className="sticky top-0 z-30 bg-zinc-900 border-b border-yellow-500/20 h-16 flex items-center justify-between px-4 sm:px-6 lg:px-8">
           <button
             onClick={() => setSidebarOpen(true)}
@@ -166,7 +169,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             </Link>
           </Button>
         </header>
-        <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden">{children}</div>
+        <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden">
+          <SubscriptionGuard>{children}</SubscriptionGuard>
+        </div>
         <footer className="mt-auto px-4 py-3 border-t border-zinc-800 text-xs text-zinc-500 text-center space-y-1">
           <p>© EMD POS 2026, All rights reserved. MDLab Enterprise.</p>
           <p>Tel: 0244-6475-10 | www.emdulab.com | admin@emdulab.com</p>
