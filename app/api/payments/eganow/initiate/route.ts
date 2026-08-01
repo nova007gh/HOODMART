@@ -34,7 +34,9 @@ export async function POST(req: NextRequest) {
 
     const transactionId = crypto.randomUUID()
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-    const callbackUrl = `${appUrl}/api/webhooks/eganow`
+    // Kept in sync with the "Collection Callback URL" registered in the
+    // Eganow merchant dashboard (Update Callback URLs screen).
+    const callbackUrl = `${appUrl}/api/collections`
 
     // Record a pending payment before calling Eganow, so the webhook always has a row to update.
     const { error: insertError } = await supabaseAdmin.from('payments').insert({
