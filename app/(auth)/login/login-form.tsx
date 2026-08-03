@@ -22,8 +22,9 @@ export default function LoginForm() {
   const [error, setError] = useState('')
   const router = useRouter()
   const search = useSearchParams()
+  const [modeOverride, setModeOverride] = useState(false)
 
-  const isRegister = mode === 'register' || search.get('register') === '1'
+  const isRegister = modeOverride ? mode === 'register' : (mode === 'register' || search.get('register') === '1')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -161,7 +162,7 @@ export default function LoginForm() {
                 {isRegister ? 'Already have an account? ' : "Don't have an account? "}
                 <button
                   type="button"
-                  onClick={() => setMode(isRegister ? 'login' : 'register')}
+                  onClick={() => { setModeOverride(true); setMode(isRegister ? 'login' : 'register') }}
                   className="text-yellow-500 hover:text-yellow-400 font-medium"
                 >
                   {isRegister ? 'Log in' : 'Register now'}
