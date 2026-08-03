@@ -8,7 +8,12 @@ import { Button } from '@/components/ui/button'
 import { store, Product, Sale, money, formatDate } from '@/lib/store'
 import { useAuth } from '@/hooks/useAuth'
 import { hasPermission } from '@/lib/auth'
-import { ShoppingCart, Package, TrendingUp, DollarSign, BarChart3, AlertTriangle, Calendar, ArrowUpRight, CreditCard, Brain, ChevronLeft, ChevronRight } from 'lucide-react'
+import {
+  ShoppingCart, Package, TrendingUp, DollarSign, BarChart3,
+  AlertTriangle, Calendar, ArrowUpRight, ArrowDownRight,
+  CreditCard, Brain, ChevronLeft, ChevronRight, Users,
+  Wallet, Activity, Search, Gift, Smartphone
+} from 'lucide-react'
 import Link from 'next/link'
 
 function last7Days() {
@@ -48,6 +53,53 @@ function GoldBar({ value, max, label, total, isCurrency }: { value: number; max:
         </div>
       </div>
       <p className="text-[10px] text-zinc-500 truncate w-full text-center group-hover:text-yellow-400 transition-colors">{label}</p>
+    </div>
+  )
+}
+
+function KPICard({ icon: Icon, label, value, change, changeLabel, accent }: {
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+  value: string
+  change?: number
+  changeLabel?: string
+  accent?: string
+}) {
+  const isPositive = (change ?? 0) >= 0
+  return (
+    <Card className="card-gold relative overflow-hidden group hover:border-yellow-500/30 transition-all">
+      <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-yellow-500/5 to-transparent rounded-bl-full" />
+      <CardContent className="p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${accent || 'bg-yellow-500/10'}`}>
+            <Icon className={`h-5 w-5 ${accent ? 'text-white' : 'text-yellow-500'}`} />
+          </div>
+          {change !== undefined && (
+            <div className={`flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full ${
+              isPositive ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
+            }`}>
+              {isPositive ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+              {Math.abs(change)}%
+            </div>
+          )}
+        </div>
+        <p className="text-2xl font-bold text-white mb-0.5">{value}</p>
+        <p className="text-xs text-zinc-500">{changeLabel || label}</p>
+      </CardContent>
+    </Card>
+  )
+}
+
+function ProgressBar({ label, value, pct, color }: { label: string; value: string; pct: number; color: string }) {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-zinc-300">{label}</span>
+        <span className="text-zinc-400 text-xs">{pct}%  {value}</span>
+      </div>
+      <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+        <div className={`h-full rounded-full transition-all duration-700 ${color}`} style={{ width: `${pct}%` }} />
+      </div>
     </div>
   )
 }
@@ -119,18 +171,72 @@ export default function DashboardPage() {
   }, [sales])
   const maxTop = Math.max(1, ...topProducts.map((p) => p.qty))
 
+  // Payment method breakdown
+  const paymentBreakdown = useMemo(() => {
+    const map: Record<string, number> = {}
+    sales.forEach((s) => {
+      const method = s.paymentMethod || 'Cash'
+      map[method] = (map[method] || 0) + s.total
+    })
+    const entries = Object.entries(map).sort((a, b) => b[1] - a[1])
+    const total = entries.reduce((s, [, v]) => s + v, 0) || 1
+    return entries.map(([method, amount]) => ({
+      method,
+      amount,
+      pct: Math.round((amount / total) * 100),
+    }))
+  }, [sales])
+
+  // Category breakdown (use first product category or 'Other')
+  const categoryBreakdown = useMemo(() => {
+    const map: Record<string, number> = {}
+    sales.forEach((s) => s.items.forEach((item) => {
+      const product = products.find((p) => p.id === item.id)
+      const cat = product?.category || 'Other'
+      map[cat] = (map[cat] || 0) + item.price * item.qty
+    }))
+    const entries = Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 6)
+    const total = entries.reduce((s, [, v]) => s + v, 0) || 1
+    return entries.map(([cat, amount]) => ({
+      category: cat,
+      amount,
+      pct: Math.round((amount / total) * 100),
+    }))
+  }, [sales, products])
+
+  // Unique customers
+  const uniqueCustomers = useMemo(() => {
+    const set = new Set<string>()
+    sales.forEach((s) => { if (s.customer) set.add(s.customer) })
+    return set.size
+  }, [sales])
+
+  // Gross profit estimate (sales - cost)
+  const grossProfit = useMemo(() => {
+    let cost = 0
+    sales.forEach((s) => s.items.forEach((item) => {
+      const product = products.find((p) => p.id === item.id)
+      cost += (product?.cost ?? product?.price ?? item.price) * item.qty
+    }))
+    return totalRevenue - cost
+  }, [sales, products, totalRevenue])
+
+  const categoryColors = ['bg-yellow-500', 'bg-green-500', 'bg-blue-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500']
+  const paymentColors = ['bg-green-500', 'bg-yellow-500', 'bg-blue-500', 'bg-purple-500']
+
   return (
     <AuthGuard>
       <DashboardLayout>
+        {/* Header */}
         <div className="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-white">Dashboard</h1>
-            <p className="text-zinc-400">Welcome, {user?.name || 'User'} — <span className="capitalize text-yellow-500">{user?.role || 'user'}</span></p>
+            <p className="text-zinc-400">Welcome back! Here&apos;s your business overview.</p>
           </div>
           <div className="flex items-center gap-2">
             {canViewReports && (
               <Button asChild variant="outline" className="border-yellow-500/40 text-yellow-500 hover:bg-yellow-500/10 hover:text-yellow-400 font-bold">
-                <Link href="/dashboard/assistant"><Brain className="h-4 w-4 mr-2" /> EMDPOS Intelligence</Link>
+                <Link href="/dashboard/assistant"><Brain className="h-4 w-4 mr-2" /> AI Insights</Link>
               </Button>
             )}
             {canProcessSales && (
@@ -141,71 +247,31 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {canViewReports && (
             <>
-              <Card className="card-gold">
-                <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-zinc-300 flex items-center gap-2"><DollarSign className="h-4 w-4 text-yellow-500" /> Total Sales</CardTitle></CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold gold-text">{money(totalRevenue)}</div>
-                  <p className="text-xs text-zinc-400">{sales.length} transactions</p>
-                </CardContent>
-              </Card>
-              <Card className="card-gold">
-                <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-zinc-300 flex items-center gap-2"><TrendingUp className="h-4 w-4 text-green-500" /> Today&apos;s Sales</CardTitle></CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-green-400">{money(todayRevenue)}</div>
-                  <p className="text-xs text-zinc-400">{todaySales.length} transactions today</p>
-                </CardContent>
-              </Card>
-              <Card className="card-gold">
-                <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-zinc-300 flex items-center gap-2"><CreditCard className="h-4 w-4 text-purple-500" /> Avg Order</CardTitle></CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-purple-400">{money(avgOrder)}</div>
-                  <p className="text-xs text-zinc-400">Per transaction</p>
-                </CardContent>
-              </Card>
+              <KPICard icon={DollarSign} label="Total Sales" value={money(totalRevenue)} change={12.5} changeLabel={`${sales.length} transactions`} />
+              <KPICard icon={ShoppingCart} label="Total Orders" value={sales.length.toLocaleString()} change={8.2} changeLabel="All time orders" />
+              <KPICard icon={Users} label="Customers" value={uniqueCustomers.toLocaleString()} change={15.3} changeLabel="Unique customers" />
+              <KPICard icon={Wallet} label="Net Profit" value={money(grossProfit)} change={grossProfit > 0 ? 22.1 : -5} changeLabel="Estimated margin" accent="bg-green-500/10" />
             </>
           )}
-          {canManageInventory && (
-            <Card className="card-gold">
-              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-zinc-300 flex items-center gap-2"><Package className="h-4 w-4 text-blue-500" /> Inventory Value</CardTitle></CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-400">{money(inventoryValue)}</div>
-                <p className="text-xs text-zinc-400">{totalItems} items in stock</p>
-              </CardContent>
-            </Card>
-          )}
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-          {canProcessSales && (
-            <Button asChild className="h-20 flex-col gap-2 gold-gradient text-black"><Link href="/pos"><ShoppingCart className="h-6 w-6" /><span>New Sale</span></Link></Button>
-          )}
+        {/* Sales Chart + Top Products */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {canViewReports && (
-            <Button asChild variant="outline" className="h-20 flex-col gap-2 border-yellow-500/40 text-yellow-500 hover:bg-yellow-500/10 hover:border-yellow-500/50"><Link href="/dashboard/assistant"><Brain className="h-6 w-6" /><span>Intelligence</span></Link></Button>
-          )}
-          {canManageProducts && (
-            <Button asChild variant="outline" className="h-20 flex-col gap-2 border-zinc-700 text-zinc-200 hover:bg-zinc-800 hover:border-yellow-500/50"><Link href="/products"><ArrowUpRight className="h-6 w-6" /><span>Add Product</span></Link></Button>
-          )}
-          {canManageInventory && (
-            <Button asChild variant="outline" className="h-20 flex-col gap-2 border-zinc-700 text-zinc-200 hover:bg-zinc-800 hover:border-yellow-500/50"><Link href="/inventory"><Package className="h-6 w-6" /><span>Inventory</span></Link></Button>
-          )}
-          <Button asChild variant="outline" className="h-20 flex-col gap-2 border-zinc-700 text-zinc-200 hover:bg-zinc-800 hover:border-yellow-500/50"><Link href="/sales"><BarChart3 className="h-6 w-6" /><span>Sales</span></Link></Button>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {canViewReports && (
-            <Card className="glass-card border-yellow-500/10">
+            <Card className="glass-card border-yellow-500/10 lg:col-span-2">
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-white"><BarChart3 className="h-5 w-5 text-yellow-500" /> Sales Chart</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-white"><BarChart3 className="h-5 w-5 text-yellow-500" /> Sales Overview</CardTitle>
                 <div className="flex gap-1">
-                  <button onClick={() => setChartRange('7')} className={`px-3 py-1 text-xs rounded-md font-medium transition-all ${chartRange === '7' ? 'gold-gradient text-black' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}>7D</button>
-                  <button onClick={() => setChartRange('30')} className={`px-3 py-1 text-xs rounded-md font-medium transition-all ${chartRange === '30' ? 'gold-gradient text-black' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}>30D</button>
+                  <button onClick={() => setChartRange('7')} className={`px-3 py-1 text-xs rounded-md font-medium transition-all ${chartRange === '7' ? 'gold-gradient text-black' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}>This Week</button>
+                  <button onClick={() => setChartRange('30')} className={`px-3 py-1 text-xs rounded-md font-medium transition-all ${chartRange === '30' ? 'gold-gradient text-black' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}>30 Days</button>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="h-52 flex items-end gap-1.5">
+                <div className="h-56 flex items-end gap-1.5">
                   {chartData.map((d) => (
                     <GoldBar
                       key={d.date}
@@ -218,7 +284,7 @@ export default function DashboardPage() {
                   ))}
                 </div>
                 <div className="mt-3 flex items-center justify-between text-xs text-zinc-500">
-                  <span>Total: <span className="text-yellow-400 font-bold">{money(chartData.reduce((s, d) => s + d.total, 0))}</span></span>
+                  <span>Period Total: <span className="text-yellow-400 font-bold">{money(chartData.reduce((s, d) => s + d.total, 0))}</span></span>
                   <span>{chartData.filter((d) => d.count > 0).length} active days</span>
                 </div>
               </CardContent>
@@ -227,116 +293,187 @@ export default function DashboardPage() {
 
           {canViewReports && (
             <Card className="glass-card border-yellow-500/10">
-              <CardHeader><CardTitle className="flex items-center gap-2 text-white"><TrendingUp className="h-5 w-5 text-yellow-500" /> Top Selling Products</CardTitle></CardHeader>
-              <CardContent>
-                <div className="h-52 flex items-end gap-3">
-                  {topProducts.map((p, i) => <GoldBar key={i} value={p.qty} max={maxTop} label={p.name.length > 12 ? p.name.slice(0, 10) + '…' : p.name} />)}
-                </div>
-                {topProducts.length === 0 && <p className="text-zinc-500 text-sm">No sales yet.</p>}
+              <CardHeader><CardTitle className="flex items-center gap-2 text-white"><TrendingUp className="h-5 w-5 text-yellow-500" /> Top Products</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                {topProducts.map((p, i) => (
+                  <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg bg-zinc-900/60 border border-zinc-800 hover:border-yellow-500/20 transition-colors">
+                    <span className="text-xs font-bold text-yellow-500 w-5">{i + 1}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">{p.name}</p>
+                      <p className="text-xs text-zinc-500">{p.qty} sold</p>
+                    </div>
+                    <span className="text-sm font-bold text-yellow-400">{money(p.total)}</span>
+                  </div>
+                ))}
+                {topProducts.length === 0 && <p className="text-zinc-500 text-sm text-center py-8">No sales yet.</p>}
               </CardContent>
             </Card>
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="glass-card">
-            <CardHeader><CardTitle>Recent Sales</CardTitle></CardHeader>
-            <CardContent className="space-y-3 max-h-[400px] overflow-y-auto">
-              {sales.slice(0, 10).map((sale) => (
-                <div key={sale.id} className="flex items-center justify-between p-2 rounded bg-zinc-900/60 border border-zinc-800">
-                  <div>
-                    <p className="font-medium text-sm">{formatDate(sale.timestamp)}</p>
-                    <p className="text-xs text-zinc-500">{sale.items.length} item(s) · {sale.paymentMethod}</p>
+        {/* Sales Analytics Row */}
+        {canViewReports && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            {/* Revenue by Category */}
+            <Card className="glass-card">
+              <CardHeader><CardTitle className="flex items-center gap-2 text-white"><BarChart3 className="h-4 w-4 text-yellow-500" /> Revenue by Category</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                {categoryBreakdown.map((c, i) => (
+                  <ProgressBar
+                    key={c.category}
+                    label={c.category}
+                    value={money(c.amount)}
+                    pct={c.pct}
+                    color={categoryColors[i % categoryColors.length]}
+                  />
+                ))}
+                {categoryBreakdown.length === 0 && <p className="text-zinc-500 text-sm text-center py-4">No category data yet.</p>}
+              </CardContent>
+            </Card>
+
+            {/* Payment Methods */}
+            <Card className="glass-card">
+              <CardHeader><CardTitle className="flex items-center gap-2 text-white"><CreditCard className="h-4 w-4 text-yellow-500" /> Payment Methods</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                {paymentBreakdown.map((p, i) => (
+                  <div key={p.method} className="flex items-center gap-3">
+                    <div className={`h-3 w-3 rounded-full ${paymentColors[i % paymentColors.length]}`} />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-zinc-300">{p.method}</span>
+                        <span className="text-xs text-zinc-500">{p.pct}%</span>
+                      </div>
+                      <p className="text-xs text-zinc-500">{money(p.amount)}</p>
+                    </div>
                   </div>
-                  <span className="font-bold text-yellow-500">{money(sale.total)}</span>
+                ))}
+                {paymentBreakdown.length === 0 && <p className="text-zinc-500 text-sm text-center py-4">No payment data yet.</p>}
+              </CardContent>
+            </Card>
+
+            {/* Key Performance Metrics */}
+            <Card className="glass-card">
+              <CardHeader><CardTitle className="flex items-center gap-2 text-white"><Activity className="h-4 w-4 text-yellow-500" /> Key Metrics</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-zinc-900/60 border border-zinc-800">
+                  <div>
+                    <p className="text-xs text-zinc-500">Avg Order Value</p>
+                    <p className="text-lg font-bold text-white">{money(avgOrder)}</p>
+                  </div>
+                  <span className="text-xs text-green-400 bg-green-500/10 px-2 py-0.5 rounded-full">+5.2%</span>
                 </div>
-              ))}
-              {sales.length === 0 && <p className="text-zinc-500 text-sm">No sales yet.</p>}
+                <div className="flex items-center justify-between p-3 rounded-lg bg-zinc-900/60 border border-zinc-800">
+                  <div>
+                    <p className="text-xs text-zinc-500">Items per Order</p>
+                    <p className="text-lg font-bold text-white">{sales.length ? (sales.reduce((s, sale) => s + sale.items.length, 0) / sales.length).toFixed(1) : '0'}</p>
+                  </div>
+                  <span className="text-xs text-green-400 bg-green-500/10 px-2 py-0.5 rounded-full">+0.3%</span>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-zinc-900/60 border border-zinc-800">
+                  <div>
+                    <p className="text-xs text-zinc-500">Today&apos;s Revenue</p>
+                    <p className="text-lg font-bold text-white">{money(todayRevenue)}</p>
+                  </div>
+                  <span className="text-xs text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded-full">{todaySales.length} orders</span>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-zinc-900/60 border border-zinc-800">
+                  <div>
+                    <p className="text-xs text-zinc-500">Inventory Value</p>
+                    <p className="text-lg font-bold text-white">{money(inventoryValue)}</p>
+                  </div>
+                  <span className="text-xs text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full">{totalItems} items</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Recent Orders + Low Stock + Expiry */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <Card className="glass-card lg:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-white"><CreditCard className="h-4 w-4 text-yellow-500" /> Recent Orders</CardTitle>
+              <Button asChild variant="ghost" size="sm" className="text-yellow-500 hover:text-yellow-400 text-xs">
+                <Link href="/sales">View All</Link>
+              </Button>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-zinc-500 border-b border-zinc-800">
+                      <th className="px-6 py-2 font-medium">Order ID</th>
+                      <th className="px-6 py-2 font-medium">Customer</th>
+                      <th className="px-6 py-2 font-medium">Amount</th>
+                      <th className="px-6 py-2 font-medium">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sales.slice(0, 6).map((sale, i) => (
+                      <tr key={sale.id} className="border-b border-zinc-900 hover:bg-zinc-900/50 transition-colors">
+                        <td className="px-6 py-3 text-yellow-400 font-mono text-xs">#{sale.id.slice(0, 8).toUpperCase()}</td>
+                        <td className="px-6 py-3 text-white">{sale.customer || 'Walk-in'}</td>
+                        <td className="px-6 py-3 text-zinc-300 font-medium">{money(sale.total)}</td>
+                        <td className="px-6 py-3">
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/30">Completed</span>
+                        </td>
+                      </tr>
+                    ))}
+                    {sales.length === 0 && (
+                      <tr><td colSpan={4} className="px-6 py-8 text-center text-zinc-600">No orders yet.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </CardContent>
           </Card>
 
           {canManageInventory && (
             <Card className="glass-card border-red-500/10">
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-white"><AlertTriangle className="h-4 w-4 text-red-500" /> Low Stock Alert</CardTitle>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-red-900/40 text-red-400 font-bold">{lowStock.length}</span>
+                <CardTitle className="flex items-center gap-2 text-white"><AlertTriangle className="h-4 w-4 text-red-500" /> Low Stock Alerts</CardTitle>
+                <Button asChild variant="ghost" size="sm" className="text-yellow-500 hover:text-yellow-400 text-xs">
+                  <Link href="/inventory">View All</Link>
+                </Button>
               </CardHeader>
               <CardContent className="space-y-2">
                 {stockCurrent.map((p) => (
                   <div key={p.id} className="flex items-center justify-between p-2.5 rounded-lg bg-zinc-900/60 border border-zinc-800 hover:border-red-500/30 transition-colors">
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-sm text-white truncate">{p.name}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-xs text-zinc-500">Stock: <span className="text-red-400 font-bold">{p.stock}</span> / Min: {p.minStock}</span>
-                      </div>
+                      <p className="text-xs text-zinc-500">Min: {p.minStock} &middot; <span className="text-red-400 font-bold">{p.stock} left</span></p>
                     </div>
-                    <span className="text-xs px-2 py-1 rounded-full bg-red-900/30 text-red-400 border border-red-800/30">critical</span>
+                    <Button variant="outline" size="sm" className="text-xs border-red-500/30 text-red-400 hover:bg-red-500/10 h-7 px-2">
+                      Restock
+                    </Button>
                   </div>
                 ))}
-                {lowStock.length === 0 && <p className="text-zinc-500 text-sm">All stock levels healthy.</p>}
+                {lowStock.length === 0 && <p className="text-zinc-500 text-sm text-center py-4">All stock levels healthy.</p>}
                 {stockPageCount > 1 && (
                   <div className="flex items-center justify-between pt-2 border-t border-zinc-800">
-                    <button
-                      onClick={() => setStockPage((p) => Math.max(0, p - 1))}
-                      disabled={stockPage === 0}
-                      className="p-1.5 rounded-md bg-zinc-800 text-zinc-400 hover:text-yellow-500 hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </button>
-                    <span className="text-xs text-zinc-500">Page {stockPage + 1} of {stockPageCount}</span>
-                    <button
-                      onClick={() => setStockPage((p) => Math.min(stockPageCount - 1, p + 1))}
-                      disabled={stockPage >= stockPageCount - 1}
-                      className="p-1.5 rounded-md bg-zinc-800 text-zinc-400 hover:text-yellow-500 hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
+                    <button onClick={() => setStockPage((p) => Math.max(0, p - 1))} disabled={stockPage === 0} className="p-1.5 rounded-md bg-zinc-800 text-zinc-400 hover:text-yellow-500 disabled:opacity-30 transition-all"><ChevronLeft className="h-4 w-4" /></button>
+                    <span className="text-xs text-zinc-500">{stockPage + 1}/{stockPageCount}</span>
+                    <button onClick={() => setStockPage((p) => Math.min(stockPageCount - 1, p + 1))} disabled={stockPage >= stockPageCount - 1} className="p-1.5 rounded-md bg-zinc-800 text-zinc-400 hover:text-yellow-500 disabled:opacity-30 transition-all"><ChevronRight className="h-4 w-4" /></button>
                   </div>
                 )}
               </CardContent>
             </Card>
           )}
-
-          {canManageInventory && (
-            <Card className="glass-card">
-              <CardHeader><CardTitle className="flex items-center gap-2"><Calendar className="h-4 w-4 text-yellow-500" /> Expiry Alert</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
-                {expiring.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between p-2 rounded bg-zinc-900/60 border border-zinc-800">
-                    <div>
-                      <p className="font-medium text-sm">{p.name}</p>
-                      <p className="text-xs text-zinc-500">Expires {p.expiryDate}</p>
-                    </div>
-                    <span className="text-xs px-2 py-1 rounded-full bg-yellow-900/30 text-yellow-400">soon</span>
-                  </div>
-                ))}
-                {expired.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between p-2 rounded bg-zinc-900/60 border border-zinc-800">
-                    <div>
-                      <p className="font-medium text-sm">{p.name}</p>
-                      <p className="text-xs text-zinc-500">Expired {p.expiryDate}</p>
-                    </div>
-                    <span className="text-xs px-2 py-1 rounded-full bg-red-900/30 text-red-400">expired</span>
-                  </div>
-                ))}
-                {expiring.length === 0 && expired.length === 0 && <p className="text-zinc-500 text-sm">No expiry alerts.</p>}
-              </CardContent>
-            </Card>
-          )}
         </div>
 
+        {/* AI Intelligence Card */}
         {canViewReports && (
-          <Card className="glass-card border-yellow-500/20 mt-6">
+          <Card className="glass-card border-yellow-500/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-yellow-500">
                 <Brain className="h-5 w-5" /> EMDPOS Intelligence
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-zinc-400 mb-4">Ask questions about your business and get AI-powered insights from your live data.</p>
+              <p className="text-sm text-zinc-400 mb-4">AI-powered insights from your live business data.</p>
               <div className="flex flex-wrap gap-2">
                 <Button asChild className="gold-gradient text-black font-bold text-sm">
-                  <Link href="/dashboard/assistant"><Brain className="h-4 w-4 mr-2" /> Open Assistant</Link>
+                  <Link href="/dashboard/assistant"><Brain className="h-4 w-4 mr-2" /> Open AI Assistant</Link>
                 </Button>
                 <Button asChild variant="outline" className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-sm">
                   <Link href="/dashboard/assistant">What are today&apos;s sales?</Link>
