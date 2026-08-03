@@ -65,6 +65,8 @@ export async function getSubscriptionInfo(): Promise<SubscriptionInfo> {
 
     if (error || !data) {
       // Fail open rather than locking a store out due to a transient read error.
+      // Suppress console noise from missing subscription columns or RLS issues.
+      if (error) console.debug('[subscription] query skipped:', error.message)
       return {
         status: 'trialing',
         plan: 'free',

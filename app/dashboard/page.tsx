@@ -221,6 +221,40 @@ export default function DashboardPage() {
     return totalRevenue - cost
   }, [sales, products, totalRevenue])
 
+  // Week-over-week change calculations
+  const weekChanges = useMemo(() => {
+    const now = new Date()
+    const thisWeekStart = new Date(now)
+    thisWeekStart.setDate(now.getDate() - 7)
+    const lastWeekStart = new Date(now)
+    lastWeekStart.setDate(now.getDate() - 14)
+
+    const thisWeek = sales.filter((s) => new Date(s.timestamp) >= thisWeekStart)
+    const lastWeek = sales.filter((s) => {
+      const d = new Date(s.timestamp)
+      return d >= lastWeekStart && d < thisWeekStart
+    })
+
+    const thisRevenue = thisWeek.reduce((s, sale) => s + sale.total, 0)
+    const lastRevenue = lastWeek.reduce((s, sale) => s + sale.total, 0)
+
+    const thisCustomers = new Set(thisWeek.filter((s) => s.customer).map((s) => s.customer)).size
+    const lastCustomers = new Set(lastWeek.filter((s) => s.customer).map((s) => s.customer)).size
+
+    const pct = (cur: number, prev: number) => {
+      if (prev === 0 && cur === 0) return undefined
+      if (prev === 0) return 100
+      return Math.round(((cur - prev) / prev) * 100 * 10) / 10
+    }
+
+    return {
+      revenue: pct(thisRevenue, lastRevenue),
+      orders: pct(thisWeek.length, lastWeek.length),
+      customers: pct(thisCustomers, lastCustomers),
+      profit: grossProfit > 0 ? pct(thisRevenue, lastRevenue) : grossProfit < 0 ? -100 : undefined,
+    }
+  }, [sales, grossProfit])
+
   const categoryColors = ['bg-yellow-500', 'bg-green-500', 'bg-blue-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500']
   const paymentColors = ['bg-green-500', 'bg-yellow-500', 'bg-blue-500', 'bg-purple-500']
 
@@ -251,10 +285,10 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {canViewReports && (
             <>
-              <KPICard icon={DollarSign} label="Total Sales" value={money(totalRevenue)} change={12.5} changeLabel={`${sales.length} transactions`} />
-              <KPICard icon={ShoppingCart} label="Total Orders" value={sales.length.toLocaleString()} change={8.2} changeLabel="All time orders" />
-              <KPICard icon={Users} label="Customers" value={uniqueCustomers.toLocaleString()} change={15.3} changeLabel="Unique customers" />
-              <KPICard icon={Wallet} label="Net Profit" value={money(grossProfit)} change={grossProfit > 0 ? 22.1 : -5} changeLabel="Estimated margin" accent="bg-green-500/10" />
+              <KPICard icon={DollarSign} label="Total Sales" value={money(totalRevenue)} change={weekChanges.revenue} changeLabel={`${sales.length} transactions`} />
+              <KPICard icon={ShoppingCart} label="Total Orders" value={sales.length.toLocaleString()} change={weekChanges.orders} changeLabel="All time orders" />
+              <KPICard icon={Users} label="Customers" value={uniqueCustomers.toLocaleString()} change={weekChanges.customers} changeLabel="Unique customers" />
+              <KPICard icon={Wallet} label="Net Profit" value={money(grossProfit)} change={weekChanges.profit} changeLabel="Estimated margin" accent="bg-green-500/10" />
             </>
           )}
         </div>
@@ -360,14 +394,16 @@ export default function DashboardPage() {
                     <p className="text-xs text-zinc-500">Avg Order Value</p>
                     <p className="text-lg font-bold text-white">{money(avgOrder)}</p>
                   </div>
-                  <span className="text-xs text-green-400 bg-green-500/10 px-2 py-0.5 rounded-full">+5.2%</span>
+                  {weekChanges.revenue !== undefined ? (
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${weekChanges.revenue >= 0 ? 'text-green-400 bg-green-500/10' : 'text-red-400 bg-red-500/10'}`}>{weekChanges.revenue >= 0 ? '+' : ''}{weekChanges.revenue}%</span>
+                  ) : <span className="text-xs text-zinc-600 bg-zinc-800 px-2 py-0.5 rounded-full">—</span>}
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-lg bg-zinc-900/60 border border-zinc-800">
                   <div>
                     <p className="text-xs text-zinc-500">Items per Order</p>
                     <p className="text-lg font-bold text-white">{sales.length ? (sales.reduce((s, sale) => s + sale.items.length, 0) / sales.length).toFixed(1) : '0'}</p>
                   </div>
-                  <span className="text-xs text-green-400 bg-green-500/10 px-2 py-0.5 rounded-full">+0.3%</span>
+                  <span className="text-xs text-zinc-400 bg-zinc-800 px-2 py-0.5 rounded-full">{sales.length ? 'avg' : '—'}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-lg bg-zinc-900/60 border border-zinc-800">
                   <div>
