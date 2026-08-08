@@ -20,6 +20,14 @@ import {
   CheckCircle2,
   Users,
   Filter,
+  Calendar,
+  Crown,
+  Zap,
+  Activity,
+  CreditCard,
+  ArrowUpRight,
+  ArrowDownRight,
+  BarChart3,
 } from 'lucide-react'
 
 interface Stats {
@@ -88,6 +96,20 @@ function timeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString()
 }
 
+function daysUntil(dateStr: string | null): number | null {
+  if (!dateStr) return null
+  const diffMs = new Date(dateStr).getTime() - Date.now()
+  return Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+}
+
+function daysLabel(days: number | null): string {
+  if (days === null) return '—'
+  if (days < 0) return `${Math.abs(days)}d overdue`
+  if (days === 0) return 'Today'
+  if (days === 1) return '1 day left'
+  return `${days} days left`
+}
+
 export default function OwnerDashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [stores, setStores] = useState<StoreRow[]>([])
@@ -139,6 +161,62 @@ export default function OwnerDashboardPage() {
     if (paymentStatusFilter === 'all') return payments
     return payments.filter((p) => p.status === paymentStatusFilter)
   }, [payments, paymentStatusFilter])
+
+  // Plan distribution
+  const planBreakdown = useMemo(() => {
+    const counts: Record<string, number> = { basic: 0, pro: 0, free: 0 }
+    stores.forEach((s) => {
+      const plan = s.plan || 'free'
+      counts[plan] = (counts[plan] || 0) + 1
+    })
+    return counts
+  }, [stores])
+
+  // Expiring soon (trial or subscription ending within 3 days)
+  const expiringSoon = useMemo(() => {
+    return stores
+      .map((s) => {
+        const endDate = s.subscription_status === 'trialing' ? s.trial_ends_at : s.current_period_end
+        const days = daysUntil(endDate)
+        return { ...s, daysRemaining: days, endDate }
+      })
+      .filter((s) => s.daysRemaining !== null && s.daysRemaining <= 3 && (s.subscription_status === 'trialing' || s.subscription_status === 'active'))
+      .sort((a, b) => (a.daysRemaining ?? 0) - (b.daysRemaining ?? 0))
+  }, [stores])
+
+  // Renewals (successful payments in last 30 days)
+  const recentRenewals = useMemo(() => {
+    return payments
+      .filter((p) => p.status === 'successful')
+      .slice(0, 10)
+  }, [payments])
+
+  // Revenue chart data (last 14 days)
+  const revenueChart = useMemo(() => {
+    const days: { date: string; label: string; total: number }[] = []
+    for (let i = 13; i >= 0; i--) {
+      const dt = new Date()
+      dt.setDate(dt.getDate() - i)
+      const dateStr = dt.toISOString().slice(0, 10)
+      const dayPayments = payments.filter((p) => p.status === 'successful' && p.created_at.startsWith(dateStr))
+      days.push({
+        date: dateStr,
+        label: dt.toLocaleDateString(undefined, { weekday: 'short' }),
+        total: dayPayments.reduce((sum, p) => sum + Number(p.amount), 0),
+      })
+    }
+    return days
+  }, [payments])
+
+  const revenueChartMax = Math.max(1, ...revenueChart.map((d) => d.total))
+
+  // Store enrichment with days remaining
+  const enrichedStores = useMemo(() => {
+    return filteredStores.map((s) => {
+      const endDate = s.subscription_status === 'trialing' ? s.trial_ends_at : s.current_period_end
+      return { ...s, daysRemaining: daysUntil(endDate) }
+    })
+  }, [filteredStores])
 
   function exportCSV() {
     const header = 'Store,Email,Plan,Status,Trial Ends,Period End,Created\n'
@@ -204,6 +282,125 @@ export default function OwnerDashboardPage() {
         <StatCard icon={Receipt} label="Payments OK / Failed" value={`${stats?.successfulPayments30d ?? 0} / ${stats?.failedPayments30d ?? 0}`} accent="text-zinc-300" />
       </div>
 
+      {/* Plan Distribution + Revenue Chart */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Plan Distribution */}
+        <Card className="bg-zinc-950 border-zinc-800">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-white text-sm flex items-center gap-2">
+              <Crown className="h-4 w-4 text-yellow-500" /> Plan Distribution
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-zinc-900/60 border border-zinc-800">
+              <div className="flex items-center gap-2">
+                <Zap className="h-4 w-4 text-yellow-500" />
+                <span className="text-sm text-zinc-300">Basic (GHS 150)</span>
+              </div>
+              <span className="text-lg font-bold text-white">{planBreakdown.basic || 0}</span>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-zinc-900/60 border border-zinc-800">
+              <div className="flex items-center gap-2">
+                <Crown className="h-4 w-4 text-yellow-500" />
+                <span className="text-sm text-zinc-300">Pro (GHS 300)</span>
+              </div>
+              <span className="text-lg font-bold text-white">{planBreakdown.pro || 0}</span>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-zinc-900/60 border border-zinc-800">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-zinc-500" />
+                <span className="text-sm text-zinc-300">Free / Trial</span>
+              </div>
+              <span className="text-lg font-bold text-white">{planBreakdown.free || 0}</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Revenue Chart */}
+        <Card className="bg-zinc-950 border-zinc-800 lg:col-span-2">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-white text-sm flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-yellow-500" /> Revenue (14 days)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-40 flex items-end gap-1.5">
+              {revenueChart.map((d) => (
+                <div key={d.date} className="flex-1 flex flex-col items-center gap-1 group">
+                  <div className="w-full flex items-end justify-center" style={{ height: '140px' }}>
+                    <div
+                      className="w-full max-w-[24px] rounded-t bg-gradient-to-t from-yellow-600 to-yellow-400 transition-all hover:from-yellow-500 hover:to-yellow-300"
+                      style={{ height: `${Math.max(2, (d.total / revenueChartMax) * 140)}px` }}
+                      title={`GHS ${d.total}`}
+                    />
+                  </div>
+                  <span className="text-[10px] text-zinc-600">{d.label}</span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 flex items-center justify-between text-xs text-zinc-500">
+              <span>Total: <span className="text-yellow-400 font-semibold">GHS {revenueChart.reduce((s, d) => s + d.total, 0).toLocaleString()}</span></span>
+              <span>{revenueChart.filter((d) => d.total > 0).length} active days</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Expiring Soon Alerts */}
+      {expiringSoon.length > 0 && (
+        <Card className="bg-red-950/30 border-red-500/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-white text-sm flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-red-400" /> Expiring Soon
+              <span className="text-xs text-red-400 font-normal">({expiringSoon.length})</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-zinc-500 border-b border-zinc-800">
+                    <th className="px-6 py-2 font-medium">Store</th>
+                    <th className="px-6 py-2 font-medium">Plan</th>
+                    <th className="px-6 py-2 font-medium">Status</th>
+                    <th className="px-6 py-2 font-medium">Ends</th>
+                    <th className="px-6 py-2 font-medium">Days Left</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {expiringSoon.map((s) => (
+                    <tr key={s.id} className="border-b border-zinc-900 hover:bg-zinc-900/50">
+                      <td className="px-6 py-3">
+                        <Link href={`/owner/stores/${s.id}`} className="text-white hover:text-yellow-400 font-medium">
+                          {s.name}
+                        </Link>
+                        <div className="text-xs text-zinc-500">{s.owner_email}</div>
+                      </td>
+                      <td className="px-6 py-3 text-zinc-300 capitalize">{s.plan}</td>
+                      <td className="px-6 py-3"><StatusBadge status={s.subscription_status} /></td>
+                      <td className="px-6 py-3 text-zinc-400 text-xs">
+                        {s.endDate ? new Date(s.endDate).toLocaleDateString() : '—'}
+                      </td>
+                      <td className="px-6 py-3">
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                          (s.daysRemaining ?? 0) <= 0
+                            ? 'bg-red-500/20 text-red-400'
+                            : (s.daysRemaining ?? 0) <= 1
+                            ? 'bg-orange-500/20 text-orange-400'
+                            : 'bg-yellow-500/20 text-yellow-400'
+                        }`}>
+                          {daysLabel(s.daysRemaining)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card className="bg-zinc-950 border-zinc-800">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-white text-base flex items-center gap-2">
@@ -247,12 +444,13 @@ export default function OwnerDashboardPage() {
                   <th className="px-6 py-2 font-medium">Plan</th>
                   <th className="px-6 py-2 font-medium">Status</th>
                   <th className="px-6 py-2 font-medium">Renews / Trial Ends</th>
+                  <th className="px-6 py-2 font-medium">Days Left</th>
                   <th className="px-6 py-2 font-medium">Last Active</th>
                   <th className="px-6 py-2 font-medium">Joined</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredStores.map((s) => (
+                {enrichedStores.map((s) => (
                   <tr key={s.id} className="border-b border-zinc-900 hover:bg-zinc-900/50 transition-colors">
                     <td className="px-6 py-3">
                       <Link href={`/owner/stores/${s.id}`} className="text-white hover:text-yellow-400 font-medium">
@@ -269,6 +467,21 @@ export default function OwnerDashboardPage() {
                         ? new Date((s.subscription_status === 'trialing' ? s.trial_ends_at : s.current_period_end) as string).toLocaleDateString()
                         : '—'}
                     </td>
+                    <td className="px-6 py-3">
+                      {s.daysRemaining !== null ? (
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                          s.daysRemaining <= 0
+                            ? 'bg-red-500/20 text-red-400'
+                            : s.daysRemaining <= 3
+                            ? 'bg-orange-500/20 text-orange-400'
+                            : s.daysRemaining <= 7
+                            ? 'bg-yellow-500/20 text-yellow-400'
+                            : 'bg-green-500/20 text-green-400'
+                        }`}>
+                          {daysLabel(s.daysRemaining)}
+                        </span>
+                      ) : <span className="text-xs text-zinc-600">—</span>}
+                    </td>
                     <td className="px-6 py-3 text-zinc-400 text-xs">
                       {s.lastActiveAt ? timeAgo(s.lastActiveAt) : 'No activity'}
                     </td>
@@ -277,9 +490,9 @@ export default function OwnerDashboardPage() {
                     </td>
                   </tr>
                 ))}
-                {filteredStores.length === 0 && (
+                {enrichedStores.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-zinc-600">
+                    <td colSpan={7} className="px-6 py-8 text-center text-zinc-600">
                       {search || statusFilter !== 'all' ? 'No stores match your filter.' : 'No stores yet.'}
                     </td>
                   </tr>
@@ -362,6 +575,44 @@ export default function OwnerDashboardPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Recent Renewals */}
+      {recentRenewals.length > 0 && (
+        <Card className="bg-zinc-950 border-zinc-800">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-white text-sm flex items-center gap-2">
+              <CreditCard className="h-4 w-4 text-green-400" /> Recent Renewals
+              <span className="text-xs text-zinc-500 font-normal">({recentRenewals.length})</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-zinc-500 border-b border-zinc-800">
+                    <th className="px-6 py-2 font-medium">Store</th>
+                    <th className="px-6 py-2 font-medium">Plan</th>
+                    <th className="px-6 py-2 font-medium">Amount</th>
+                    <th className="px-6 py-2 font-medium">Provider</th>
+                    <th className="px-6 py-2 font-medium">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentRenewals.map((p) => (
+                    <tr key={p.id} className="border-b border-zinc-900 hover:bg-zinc-900/50">
+                      <td className="px-6 py-3 text-white">{p.storeName}</td>
+                      <td className="px-6 py-3 text-zinc-300 capitalize">{p.plan}</td>
+                      <td className="px-6 py-3 text-green-400 font-medium">{p.currency} {p.amount}</td>
+                      <td className="px-6 py-3 text-zinc-400 capitalize">{p.provider}</td>
+                      <td className="px-6 py-3 text-zinc-500 text-xs">{timeAgo(p.created_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
