@@ -28,6 +28,9 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   BarChart3,
+  UserPlus,
+  Percent,
+  RotateCcw,
 } from 'lucide-react'
 
 interface Stats {
@@ -229,6 +232,27 @@ export default function OwnerDashboardPage() {
     })
   }, [filteredStores])
 
+  // New stores in last 7 days
+  const newStoresThisWeek = useMemo(() => {
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    return stores.filter((s) => new Date(s.created_at) >= weekAgo).length
+  }, [stores])
+
+  // Payment success rate (last 30 days)
+  const paymentSuccessRate = useMemo(() => {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    const recent = payments.filter((p) => new Date(p.created_at) >= thirtyDaysAgo)
+    if (recent.length === 0) return null
+    const successful = recent.filter((p) => p.status === 'successful').length
+    return Math.round((successful / recent.length) * 100)
+  }, [payments])
+
+  // Failed payments alert (last 30 days)
+  const recentFailedPayments = useMemo(() => {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    return payments.filter((p) => p.status === 'failed' && new Date(p.created_at) >= thirtyDaysAgo)
+  }, [payments])
+
   function exportCSV() {
     const header = 'Store,Email,Plan,Status,Trial Ends,Period End,Created\n'
     const rows = stores.map((s) =>
@@ -304,6 +328,8 @@ export default function OwnerDashboardPage() {
         <StatCard icon={XCircle} label="Expired" value={stats?.expired ?? 0} accent="text-red-400" />
         <StatCard icon={TrendingUp} label="Revenue (30d)" value={`GHS ${(stats?.revenue30d ?? 0).toLocaleString()}`} accent="text-green-400" />
         <StatCard icon={Receipt} label="Payments OK / Failed" value={`${stats?.successfulPayments30d ?? 0} / ${stats?.failedPayments30d ?? 0}`} accent="text-zinc-300" />
+        <StatCard icon={UserPlus} label="New Stores (7d)" value={newStoresThisWeek} accent="text-yellow-400" />
+        <StatCard icon={Percent} label="Payment Success" value={paymentSuccessRate !== null ? `${paymentSuccessRate}%` : '—'} accent={paymentSuccessRate !== null && paymentSuccessRate >= 90 ? 'text-green-400' : paymentSuccessRate !== null ? 'text-yellow-400' : 'text-zinc-400'} />
       </div>
 
       {/* Plan Distribution + Revenue Chart */}
@@ -416,6 +442,44 @@ export default function OwnerDashboardPage() {
                           {daysLabel(s.daysRemaining)}
                         </span>
                       </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Failed Payments Alert */}
+      {recentFailedPayments.length > 0 && (
+        <Card className="bg-red-950/30 border-red-500/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-white text-sm flex items-center gap-2">
+              <XCircle className="h-4 w-4 text-red-400" /> Failed Payments (30d)
+              <span className="text-xs text-red-400 font-normal">({recentFailedPayments.length})</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-zinc-500 border-b border-zinc-800">
+                    <th className="px-6 py-2 font-medium">Store</th>
+                    <th className="px-6 py-2 font-medium">Plan</th>
+                    <th className="px-6 py-2 font-medium">Amount</th>
+                    <th className="px-6 py-2 font-medium">Provider</th>
+                    <th className="px-6 py-2 font-medium">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentFailedPayments.slice(0, 10).map((p) => (
+                    <tr key={p.id} className="border-b border-zinc-900 hover:bg-zinc-900/50">
+                      <td className="px-6 py-3 text-white">{p.storeName}</td>
+                      <td className="px-6 py-3 text-zinc-300 capitalize">{p.plan}</td>
+                      <td className="px-6 py-3 text-red-400 font-medium">{p.currency} {p.amount}</td>
+                      <td className="px-6 py-3 text-zinc-400 capitalize">{p.provider}</td>
+                      <td className="px-6 py-3 text-zinc-500 text-xs">{timeAgo(p.created_at)}</td>
                     </tr>
                   ))}
                 </tbody>
