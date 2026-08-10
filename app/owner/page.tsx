@@ -54,6 +54,7 @@ interface StoreRow {
   subscription_status: string
   trial_ends_at: string | null
   current_period_end: string | null
+  subscription_provider: string | null
   created_at: string
   lastActiveAt: string | null
 }
@@ -531,6 +532,7 @@ export default function OwnerDashboardPage() {
                   <th className="px-6 py-2 font-medium">Store</th>
                   <th className="px-6 py-2 font-medium">Plan</th>
                   <th className="px-6 py-2 font-medium">Status</th>
+                  <th className="px-6 py-2 font-medium">Provider</th>
                   <th className="px-6 py-2 font-medium">Renews / Trial Ends</th>
                   <th className="px-6 py-2 font-medium">Days Left</th>
                   <th className="px-6 py-2 font-medium">Last Active</th>
@@ -549,6 +551,9 @@ export default function OwnerDashboardPage() {
                     <td className="px-6 py-3 text-zinc-300 capitalize">{s.plan}</td>
                     <td className="px-6 py-3">
                       <StatusBadge status={s.subscription_status} />
+                    </td>
+                    <td className="px-6 py-3 text-zinc-400 text-xs capitalize">
+                      {s.subscription_provider || '—'}
                     </td>
                     <td className="px-6 py-3 text-zinc-400 text-xs">
                       {(s.subscription_status === 'trialing' ? s.trial_ends_at : s.current_period_end)
@@ -580,7 +585,7 @@ export default function OwnerDashboardPage() {
                 ))}
                 {enrichedStores.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-6 py-8 text-center text-zinc-600">
+                    <td colSpan={8} className="px-6 py-8 text-center text-zinc-600">
                       {search || statusFilter !== 'all' ? 'No stores match your filter.' : 'No stores yet.'}
                     </td>
                   </tr>
