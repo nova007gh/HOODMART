@@ -43,7 +43,15 @@ export default function OwnerLoginPage() {
       const res = await ownerFetch('/api/owner/me')
       if (!res.ok) {
         await supabase.auth.signOut()
-        setError('This account is not authorized to access the owner console.')
+        if (res.status === 401) {
+          setError('Session expired or invalid. Please sign in again.')
+        } else if (res.status === 403) {
+          setError('This account is not authorized to access the owner console.')
+        } else if (res.status >= 500) {
+          setError('Owner console server is not configured. Missing service role key or database setup.')
+        } else {
+          setError('Could not verify owner access. Please try again.')
+        }
         return
       }
 

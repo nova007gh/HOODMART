@@ -116,6 +116,7 @@ export default function OwnerDashboardPage() {
   const [payments, setPayments] = useState<PaymentRow[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -123,16 +124,26 @@ export default function OwnerDashboardPage() {
 
   const load = useCallback(async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true)
+    setError(null)
     try {
       const [statsRes, storesRes, paymentsRes] = await Promise.all([
         ownerFetch('/api/owner/stats'),
         ownerFetch('/api/owner/stores'),
         ownerFetch('/api/owner/payments'),
       ])
-      if (statsRes.ok) setStats(await statsRes.json())
-      if (storesRes.ok) setStores((await storesRes.json()).stores)
-      if (paymentsRes.ok) setPayments((await paymentsRes.json()).payments)
+
+      if (!statsRes.ok || !storesRes.ok || !paymentsRes.ok) {
+        const failed = [statsRes, storesRes, paymentsRes].find((r) => !r.ok)
+        setError(`Failed to load dashboard data. ${failed?.status === 500 ? 'Server configuration issue.' : 'Please try again.'}`)
+        return
+      }
+
+      setStats(await statsRes.json())
+      setStores((await storesRes.json()).stores)
+      setPayments((await paymentsRes.json()).payments)
       setLastRefreshed(new Date())
+    } catch (err: any) {
+      setError(err.message || 'Network error while loading dashboard.')
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -236,6 +247,19 @@ export default function OwnerDashboardPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <RefreshCw className="h-6 w-6 text-yellow-500 animate-spin" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 space-y-4">
+        <AlertTriangle className="h-10 w-10 text-red-400" />
+        <h2 className="text-xl font-bold text-white">Dashboard unavailable</h2>
+        <p className="text-zinc-500 text-sm max-w-md text-center">{error}</p>
+        <Button onClick={() => load(true)} className="gold-gradient text-black">
+          <RefreshCw className="h-4 w-4 mr-2" /> Try Again
+        </Button>
       </div>
     )
   }
