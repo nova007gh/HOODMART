@@ -1,6 +1,6 @@
 export const metadata = {
-  title: 'Login | EMDPOS',
-  description: 'Sign in to EMDPOS',
+  title: 'Login | HOODMART',
+  description: 'Sign in to HOODMART',
 }
 
 export default function AuthLayout({

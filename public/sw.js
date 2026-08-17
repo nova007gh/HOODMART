@@ -1,4 +1,4 @@
-const CACHE_NAME = 'emdpos-v2.1.0';
+const CACHE_NAME = 'hoodmart-v2.1.0';
 const urlsToCache = [
   '/',
   '/login',
@@ -16,11 +16,11 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('EMDPOS cache opened');
+        console.log('HOODMART cache opened');
         return cache.addAll(urlsToCache.map(url => new Request(url, { mode: 'no-cors' })));
       })
       .catch((err) => {
-        console.warn('EMDPOS cache prefill skipped:', err);
+        console.warn('HOODMART cache prefill skipped:', err);
       })
   );
   self.skipWaiting();
@@ -84,7 +84,7 @@ self.addEventListener('sync', (event) => {
 
 self.addEventListener('push', (event) => {
   const options = {
-    body: event.data ? event.data.text() : 'New notification from EMDPOS',
+    body: event.data ? event.data.text() : 'New notification from HOODMART',
     icon: '/icons/icon.svg',
     badge: '/icons/icon.svg',
     vibrate: [100, 50, 100],
@@ -96,7 +96,7 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification('EMDPOS Notification', options)
+    self.registration.showNotification('HOODMART Notification', options)
   );
 });
 

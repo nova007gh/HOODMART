@@ -16,8 +16,8 @@ export interface Session {
 
 type StoredUser = { password: string; name: string; role: string; permissions?: string[], storeId?: string }
 
-const SESSION_KEY = 'emdpos_session'
-const USERS_KEY = 'emdpos_users'
+const SESSION_KEY = 'hoodmart_session'
+const USERS_KEY = 'hoodmart_users'
 
 function getUsers(): Record<string, StoredUser> {
   if (typeof window === 'undefined') return {}

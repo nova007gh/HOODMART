@@ -1,4 +1,4 @@
-# EMDPOS Retail OS — Supabase Setup
+# HOODMART Retail OS — Supabase Setup
 
 ## Overview
 
@@ -59,7 +59,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
 └─────────────────────────────────────────────────┘
 ```
 
-- **Offline**: All reads/writes go to localStorage. Changes are queued in `emdpos_pending_sync`.
+- **Offline**: All reads/writes go to localStorage. Changes are queued in `hoodmart_pending_sync`.
 - **Online**: Queued changes are pushed to Supabase. Remote data is pulled to update localStorage.
 - **Realtime**: Supabase realtime publications enable live updates across devices.
 

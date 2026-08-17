@@ -43,11 +43,11 @@ export interface InventoryReportData {
 export type ReportType = 'sales' | 'inventory'
 
 function getStoreName(): string {
-  if (typeof window === 'undefined') return 'EMDPOS Store'
-  return localStorage.getItem('emdpos_store_name') || 'EMDPOS Store'
+  if (typeof window === 'undefined') return 'HOODMART Store'
+  return localStorage.getItem('hoodmart_store_name') || 'HOODMART Store'
 }
 
-function addHeader(doc: jsPDF, title: string, period: string, shopName: string = 'EMDPOS Store') {
+function addHeader(doc: jsPDF, title: string, period: string, shopName: string = 'HOODMART Store') {
   // Gold banner across the top
   doc.setFillColor(212, 160, 23)
   doc.rect(0, 0, 210, 38, 'F')
@@ -69,7 +69,7 @@ function addHeader(doc: jsPDF, title: string, period: string, shopName: string =
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(8)
   doc.setTextColor(60, 45, 10)
-  doc.text('Powered by EMDPOS Retail OS', 36, 24)
+  doc.text('Powered by HOODMART Retail OS', 36, 24)
 
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(11)

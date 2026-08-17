@@ -24,7 +24,7 @@ export function processQuestion(
 
   if (!canAccessAI(user.role)) {
     const result: LocalAIResult = {
-      answer: 'You do not have permission to use EMDPOS Intelligence.',
+      answer: 'You do not have permission to use HOODMART Intelligence.',
       toolResults: [],
       dateRangeLabel: '',
       durationMs: Date.now() - startTime,

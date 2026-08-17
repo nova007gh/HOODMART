@@ -102,7 +102,7 @@ export default function POSPage() {
 
   const receiptHtml = (s: Sale) => `
     <div style="font-family:monospace;max-width:300px;">
-      <h2 style="text-align:center;margin:0;">EMDPOS</h2>
+      <h2 style="text-align:center;margin:0;">HOODMART</h2>
       <p style="text-align:center;font-size:12px;color:#555;">${formatDateTime(s.timestamp)}<br>${s.paymentMethod}<br>Salesperson: ${s.userName || s.userEmail || 'N/A'}</p>
       <hr style="border:0;border-top:1px solid #000;"/>
       ${s.items.map((i) => `<div style="display:flex;justify-content:space-between;font-size:13px;"><span>${i.name} x${i.qty}</span><span>${money(i.price * i.qty)}</span></div>`).join('')}
@@ -140,12 +140,12 @@ export default function POSPage() {
         .catch(() => ({ ok: false, skipped: true }))
 
     if (customerEmail) {
-      send({ to: customerEmail, subject: 'Your EMDPOS Receipt', html: receiptHtml(s) }).then((data) => {
+      send({ to: customerEmail, subject: 'Your HOODMART Receipt', html: receiptHtml(s) }).then((data) => {
         if (data.ok) toast.success('Receipt emailed to customer')
         else if (data.error && data.error !== 'Email not configured') toast.error(data.error)
       })
     }
-    send({ type: 'admin', subject: 'New EMDPOS Sale Receipt', html: receiptHtml(s) }).then((data) => {
+    send({ type: 'admin', subject: 'New HOODMART Sale Receipt', html: receiptHtml(s) }).then((data) => {
       if (data.ok) toast.success('Receipt emailed to admin')
     })
     send({ type: 'admin', subject: 'Daily Sales Report', html: dailyReportHtml() }).then((data) => {
@@ -461,12 +461,12 @@ export default function POSPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 no-print">
             <Card className="w-full max-w-md bg-white text-black">
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-black text-lg font-bold">EMDPOS Receipt</CardTitle>
+                <CardTitle className="text-black text-lg font-bold">HOODMART Receipt</CardTitle>
                 <button onClick={() => setReceipt(null)} className="text-zinc-500 hover:text-black"><X className="h-5 w-5" /></button>
               </CardHeader>
               <CardContent className="space-y-3 print-receipt">
                 <div className="text-center border-b border-zinc-300 pb-3">
-                  <p className="font-bold text-lg">EMDPOS</p>
+                  <p className="font-bold text-lg">HOODMART</p>
                   <p className="text-xs text-zinc-500">{new Date(receipt.timestamp).toLocaleString()}</p>
                   <p className="text-xs text-zinc-500 uppercase">{receipt.paymentMethod}</p>
                   <p className="text-xs text-zinc-500">Served by: {receipt.userName || receipt.userEmail || 'Unknown'}</p>

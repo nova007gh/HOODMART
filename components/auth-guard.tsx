@@ -23,7 +23,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   if (!mounted || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-900 text-zinc-400">
-        Loading EMDPOS…
+        Loading HOODMART…
       </div>
     )
   }

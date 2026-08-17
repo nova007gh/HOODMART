@@ -34,7 +34,7 @@ export default function LoginForm() {
     if (isRegister) {
       const result = await register(email, password, storeName || name || email, 'admin', ['*'])
       if (result.ok) {
-        toast.success('Account created! Welcome to EMDPOS.')
+        toast.success('Account created! Welcome to HOODMART.')
         router.push('/dashboard')
       } else {
         const errMsg = result.error && result.error !== '{}' ? result.error : 'Registration failed. Please try again.'
@@ -43,7 +43,7 @@ export default function LoginForm() {
     } else {
       const session = await login(email, password)
       if (session) {
-        toast.success('Welcome back to EMDPOS!')
+        toast.success('Welcome back to HOODMART!')
         router.push('/dashboard')
       } else {
         setError('Invalid email or password.')
@@ -60,7 +60,7 @@ export default function LoginForm() {
           <div className="inline-flex items-center justify-center w-20 h-20 gold-gradient rounded-2xl mb-4 animate-gold-pulse">
             <Store className="w-10 h-10 text-black" />
           </div>
-          <h1 className="text-4xl font-bold gold-text mb-2">EMDPOS</h1>
+          <h1 className="text-4xl font-bold gold-text mb-2">HOODMART</h1>
           <p className="text-zinc-400">Retail OS — Gold Edition</p>
         </div>
 

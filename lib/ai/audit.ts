@@ -12,7 +12,7 @@ export interface AuditEntry {
   error?: string
 }
 
-const AUDIT_KEY = 'emdpos_ai_audit'
+const AUDIT_KEY = 'hoodmart_ai_audit'
 
 function getAuditLog(): AuditEntry[] {
   if (typeof window === 'undefined') return []

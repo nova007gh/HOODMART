@@ -27,7 +27,7 @@ export default function ReceiptPage() {
   return (
     <div className="min-h-screen bg-zinc-100 text-black p-4">
       <div className="receipt-page max-w-[80mm] mx-auto bg-white p-4 rounded shadow-lg">
-        <h1 className="text-center font-bold text-xl tracking-wider">EMDPOS</h1>
+        <h1 className="text-center font-bold text-xl tracking-wider">HOODMART</h1>
         <p className="text-center text-xs text-zinc-600">{formatDateTime(sale.timestamp)}</p>
         <p className="text-center text-xs text-zinc-600 uppercase">{sale.paymentMethod}</p>
         {sale.branchId && <p className="text-center text-xs text-zinc-600">Branch: {sale.branchId}</p>}

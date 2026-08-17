@@ -38,7 +38,7 @@ function createWindow() {
     height: 900,
     minWidth: 1024,
     minHeight: 700,
-    title: 'EMDPOS Retail OS',
+    title: 'HOODMART Retail OS',
     backgroundColor: '#0a0a0a',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -121,7 +121,7 @@ function createMenu() {
     {
       label: 'Help',
       submenu: [
-        { label: 'About EMDPOS', click: () => shell.openExternal('https://www.emdulab.com') },
+        { label: 'About HOODMART', click: () => shell.openExternal('https://www.emdulab.com') },
         { label: 'Support', click: () => shell.openExternal('mailto:admin@emdulab.com') },
       ],
     },

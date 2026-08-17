@@ -153,10 +153,10 @@ export default function ReportsPage() {
     try {
       if (reportType === 'sales') {
         const doc = generateSalesPDF(salesData)
-        downloadPDF(doc, `EMDPOS-Sales-Report-${start}-${end}.pdf`)
+        downloadPDF(doc, `HOODMART-Sales-Report-${start}-${end}.pdf`)
       } else {
         const doc = generateInventoryPDF(inventoryData)
-        downloadPDF(doc, `EMDPOS-Inventory-Report-${new Date().toISOString().slice(0, 10)}.pdf`)
+        downloadPDF(doc, `HOODMART-Inventory-Report-${new Date().toISOString().slice(0, 10)}.pdf`)
       }
     } finally {
       setGenerating(false)
@@ -346,7 +346,7 @@ export default function ReportsPage() {
                 <div className="space-y-4">
                   <p className="text-zinc-400 text-sm">The PDF will include:</p>
                   <ul className="list-disc pl-5 text-sm text-zinc-300 space-y-1">
-                    <li>EMDPOS logo and report title on a clean gold banner</li>
+                    <li>HOODMART logo and report title on a clean gold banner</li>
                     <li>Summary boxes for transactions, revenue, items sold, and average order value</li>
                     <li>Payment method breakdown</li>
                     <li>Sales by day</li>
@@ -360,7 +360,7 @@ export default function ReportsPage() {
                 <div className="space-y-4">
                   <p className="text-zinc-400 text-sm">The PDF will include:</p>
                   <ul className="list-disc pl-5 text-sm text-zinc-300 space-y-1">
-                    <li>EMDPOS logo and report title on a clean gold banner</li>
+                    <li>HOODMART logo and report title on a clean gold banner</li>
                     <li>Summary boxes for total SKUs, total stock, and inventory value</li>
                     <li>Low stock items</li>
                     <li>Out of stock items</li>

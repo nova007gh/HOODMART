@@ -60,18 +60,18 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const { session, logout } = useAuth()
-  const [storeName, setStoreName] = useState('EMDPOS')
+  const [storeName, setStoreName] = useState('HOODMART')
 
   useEffect(() => {
     const name = session?.user?.name
     if (name) {
       setStoreName(name)
-      try { localStorage.setItem('emdpos_store_name', name) } catch {}
+      try { localStorage.setItem('hoodmart_store_name', name) } catch {}
     } else {
       try {
-        setStoreName(localStorage.getItem('emdpos_store_name') || 'EMDPOS')
+        setStoreName(localStorage.getItem('hoodmart_store_name') || 'HOODMART')
       } catch {
-        setStoreName('EMDPOS')
+        setStoreName('HOODMART')
       }
     }
   }, [session])

@@ -1,6 +1,6 @@
 export type Theme = 'gold' | 'white'
 
-const THEME_KEY = 'emdpos_theme'
+const THEME_KEY = 'hoodmart_theme'
 
 export function getTheme(): Theme {
   if (typeof window === 'undefined') return 'gold'

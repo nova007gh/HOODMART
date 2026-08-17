@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
       amount,
       msisdn,
       transactionId,
-      narration: `EMDPOS ${plan} plan subscription`,
+      narration: `HOODMART ${plan} plan subscription`,
       callbackUrl,
     })
 

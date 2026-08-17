@@ -56,7 +56,7 @@ export default function LandingPage() {
             <div className="h-9 w-9 gold-gradient rounded-lg flex items-center justify-center">
               <Store className="h-5 w-5 text-black" />
             </div>
-            <span className="text-xl font-bold gold-text">EMDPOS</span>
+            <span className="text-xl font-bold gold-text">HOODMART</span>
           </div>
           <div className="flex items-center gap-3">
             <a href="#pricing" className="text-sm text-zinc-400 hover:text-white hidden sm:block">Pricing</a>
@@ -77,7 +77,7 @@ export default function LandingPage() {
                 <Sparkles className="h-3 w-3" /> The Golden Retail OS
               </div>
               <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight mb-6">
-                Run your store with <span className="gold-text">EMDPOS</span>
+                Run your store with <span className="gold-text">HOODMART</span>
               </h1>
               <p className="text-lg text-zinc-400 mb-8">
                 The all-in-one point of sale, inventory, and sales system built for modern retailers. Fast, offline-ready, and styled in gold.
@@ -189,7 +189,7 @@ export default function LandingPage() {
       </main>
 
       <footer className="border-t border-zinc-800 py-6 text-center text-xs text-zinc-600">
-        &copy; {new Date().getFullYear()} EMDPOS Retail OS. All rights reserved.
+        &copy; {new Date().getFullYear()} HOODMART Retail OS. All rights reserved.
       </footer>
     </div>
   )

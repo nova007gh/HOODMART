@@ -1,7 +1,7 @@
 {
-  "name": "emdpos-retail-os",
+  "name": "hoodmart-retail-os",
   "version": "2.0.0",
-  "description": "EMDPOS Retail Point of Sale System - Next.js Cross-Platform",
+  "description": "HOODMART Retail Point of Sale System - Next.js Cross-Platform",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -69,8 +69,8 @@
   },
   "main": "main.js",
   "build": {
-    "appId": "com.emdpos.retail.next",
-    "productName": "EMDPOS Retail OS",
+    "appId": "com.hoodmart.retail",
+    "productName": "HOODMART Retail OS",
     "directories": {
       "output": "dist",
       "buildResources": "build-resources"
@@ -113,7 +113,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "EMDPOS Retail OS"
+      "shortcutName": "HOODMART Retail OS"
     }
   }
 }

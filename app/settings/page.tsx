@@ -19,15 +19,15 @@ const KEYS = [
   STORE_KEYS.CUSTOMERS,
   STORE_KEYS.SUSPENDED,
   STORE_KEYS.BRANCHES,
-  'emdpos_users',
-  'emdpos_session',
-  'emdpos_store_name',
-  'emdpos_store_address',
-  'emdpos_low_stock',
-  'emdpos_ai_rate_limit',
-  'emdpos_ai_audit',
-  'emdpos_ai_conversations',
-  'emdpos_ai_messages',
+  'hoodmart_users',
+  'hoodmart_session',
+  'hoodmart_store_name',
+  'hoodmart_store_address',
+  'hoodmart_low_stock',
+  'hoodmart_ai_rate_limit',
+  'hoodmart_ai_audit',
+  'hoodmart_ai_conversations',
+  'hoodmart_ai_messages',
 ]
 
 function buildBackup() {
@@ -37,7 +37,7 @@ function buildBackup() {
 }
 
 export default function SettingsPage() {
-  const [storeName, setStoreName] = useState('EMDPOS Store')
+  const [storeName, setStoreName] = useState('HOODMART Store')
   const [address, setAddress] = useState('')
   const [lowStock, setLowStock] = useState(true)
   const [newPassword, setNewPassword] = useState('')
@@ -47,9 +47,9 @@ export default function SettingsPage() {
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    setStoreName(localStorage.getItem('emdpos_store_name') || 'EMDPOS Store')
-    setAddress(localStorage.getItem('emdpos_store_address') || '')
-    setLowStock(localStorage.getItem('emdpos_low_stock') !== 'false')
+    setStoreName(localStorage.getItem('hoodmart_store_name') || 'HOODMART Store')
+    setAddress(localStorage.getItem('hoodmart_store_address') || '')
+    setLowStock(localStorage.getItem('hoodmart_low_stock') !== 'false')
     setThemeState(getTheme())
     const session = getSession()
     setUserIsAdmin(isAdmin(session?.user ?? null))
@@ -63,9 +63,9 @@ export default function SettingsPage() {
 
   const save = (e: React.FormEvent) => {
     e.preventDefault()
-    localStorage.setItem('emdpos_store_name', storeName)
-    localStorage.setItem('emdpos_store_address', address)
-    localStorage.setItem('emdpos_low_stock', lowStock ? 'true' : 'false')
+    localStorage.setItem('hoodmart_store_name', storeName)
+    localStorage.setItem('hoodmart_store_address', address)
+    localStorage.setItem('hoodmart_low_stock', lowStock ? 'true' : 'false')
     toast.success('Settings saved')
   }
 
@@ -87,7 +87,7 @@ export default function SettingsPage() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `emdpos-backup-${new Date().toISOString().slice(0, 10)}.json`
+    a.download = `hoodmart-backup-${new Date().toISOString().slice(0, 10)}.json`
     a.click()
     URL.revokeObjectURL(url)
     toast.success('Backup downloaded')

@@ -1,6 +1,6 @@
 export const metadata = {
-  title: 'Dashboard | EMDPOS',
-  description: 'EMDPOS dashboard',
+  title: 'Dashboard | HOODMART',
+  description: 'HOODMART dashboard',
 }
 
 export default function DashboardLayoutWrapper({

@@ -1,4 +1,4 @@
-const RATE_LIMIT_KEY = 'emdpos_ai_rate_limit'
+const RATE_LIMIT_KEY = 'hoodmart_ai_rate_limit'
 const MAX_REQUESTS_PER_HOUR = 50
 const MAX_REQUESTS_PER_MINUTE = 10
 

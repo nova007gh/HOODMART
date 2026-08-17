@@ -2,23 +2,23 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { getStoreId } from '@/lib/auth'
 
 const KEYS = {
-  PRODUCTS: 'emdpos_v2_products',
-  SALES: 'emdpos_v2_sales',
-  CUSTOMERS: 'emdpos_v2_customers',
-  DISCOUNTS: 'emdpos_v2_discounts',
-  BRANCHES: 'emdpos_v2_branches',
-  SUSPENDED: 'emdpos_v2_suspended',
-  EMPLOYEES: 'emdpos_v2_employees',
-  SUPPLIERS: 'emdpos_v2_suppliers',
-  ACTIVITIES: 'emdpos_v2_activities',
-  GIFT_CARDS: 'emdpos_v2_gift_cards',
-  EXPENSES: 'emdpos_v2_expenses',
-  QUOTATIONS: 'emdpos_v2_quotations',
+  PRODUCTS: 'hoodmart_v2_products',
+  SALES: 'hoodmart_v2_sales',
+  CUSTOMERS: 'hoodmart_v2_customers',
+  DISCOUNTS: 'hoodmart_v2_discounts',
+  BRANCHES: 'hoodmart_v2_branches',
+  SUSPENDED: 'hoodmart_v2_suspended',
+  EMPLOYEES: 'hoodmart_v2_employees',
+  SUPPLIERS: 'hoodmart_v2_suppliers',
+  ACTIVITIES: 'hoodmart_v2_activities',
+  GIFT_CARDS: 'hoodmart_v2_gift_cards',
+  EXPENSES: 'hoodmart_v2_expenses',
+  QUOTATIONS: 'hoodmart_v2_quotations',
 }
 
-const SYNC_KEY = 'emdpos_pending_sync'
-const LAST_SYNC_KEY = 'emdpos_last_sync'
-const DEVICE_KEY = 'emdpos_device_id'
+const SYNC_KEY = 'hoodmart_pending_sync'
+const LAST_SYNC_KEY = 'hoodmart_last_sync'
+const DEVICE_KEY = 'hoodmart_device_id'
 
 function get<T>(k: string, def: T): T {
   if (typeof window === 'undefined') return def

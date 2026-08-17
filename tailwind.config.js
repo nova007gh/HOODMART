@@ -51,7 +51,7 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // EMDPOS Brand Colors
+        // HOODMART Brand Colors
         gold: {
           50: '#fffdf0',
           100: '#fefce8',

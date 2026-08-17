@@ -502,7 +502,7 @@ export default function DashboardPage() {
           <Card className="glass-card border-yellow-500/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-yellow-500">
-                <Brain className="h-5 w-5" /> EMDPOS Intelligence
+                <Brain className="h-5 w-5" /> HOODMART Intelligence
               </CardTitle>
             </CardHeader>
             <CardContent>

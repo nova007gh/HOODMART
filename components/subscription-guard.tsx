@@ -62,7 +62,7 @@ export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
             {info.status === 'trialing' ? 'Your free trial has ended' : 'Subscription required'}
           </h2>
           <p className="text-zinc-400 text-sm">
-            Renew your subscription to continue using EMDPOS Retail OS. Your data is safe and will be restored immediately after payment.
+            Renew your subscription to continue using HOODMART Retail OS. Your data is safe and will be restored immediately after payment.
           </p>
           <Button className="gold-gradient text-black w-full" onClick={() => router.push('/billing')}>
             Go to Billing

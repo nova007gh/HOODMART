@@ -20,8 +20,8 @@ export interface Message {
   model?: string
 }
 
-const CONV_KEY = 'emdpos_ai_conversations'
-const MSG_KEY = 'emdpos_ai_messages'
+const CONV_KEY = 'hoodmart_ai_conversations'
+const MSG_KEY = 'hoodmart_ai_messages'
 
 function uuid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36)

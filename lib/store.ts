@@ -177,21 +177,21 @@ export interface Quotation {
 }
 
 export const KEYS = {
-  PRODUCTS: 'emdpos_v2_products',
-  DISCOUNTS: 'emdpos_v2_discounts',
-  SALES: 'emdpos_v2_sales',
-  CUSTOMERS: 'emdpos_v2_customers',
-  SUSPENDED: 'emdpos_v2_suspended',
-  BRANCHES: 'emdpos_v2_branches',
-  ACTIVITIES: 'emdpos_v2_activities',
-  EMPLOYEES: 'emdpos_v2_employees',
-  SUPPLIERS: 'emdpos_v2_suppliers',
-  GIFT_CARDS: 'emdpos_v2_gift_cards',
-  EXPENSES: 'emdpos_v2_expenses',
-  QUOTATIONS: 'emdpos_v2_quotations',
+  PRODUCTS: 'hoodmart_v2_products',
+  DISCOUNTS: 'hoodmart_v2_discounts',
+  SALES: 'hoodmart_v2_sales',
+  CUSTOMERS: 'hoodmart_v2_customers',
+  SUSPENDED: 'hoodmart_v2_suspended',
+  BRANCHES: 'hoodmart_v2_branches',
+  ACTIVITIES: 'hoodmart_v2_activities',
+  EMPLOYEES: 'hoodmart_v2_employees',
+  SUPPLIERS: 'hoodmart_v2_suppliers',
+  GIFT_CARDS: 'hoodmart_v2_gift_cards',
+  EXPENSES: 'hoodmart_v2_expenses',
+  QUOTATIONS: 'hoodmart_v2_quotations',
 }
 
-const SEED_KEY = 'emdpos_v2_seeded'
+const SEED_KEY = 'hoodmart_v2_seeded'
 
 function get<T>(k: string, def: T): T {
   if (typeof window === 'undefined') return def

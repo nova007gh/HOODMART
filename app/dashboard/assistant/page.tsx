@@ -231,7 +231,7 @@ export default function AssistantPage() {
               <CardContent className="pt-6 text-center">
                 <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
                 <h2 className="text-xl font-bold text-white mb-2">Access Denied</h2>
-                <p className="text-zinc-400">Your role ({session.user.role}) does not have permission to use EMDPOS Intelligence.</p>
+                <p className="text-zinc-400">Your role ({session.user.role}) does not have permission to use HOODMART Intelligence.</p>
               </CardContent>
             </Card>
           </div>
@@ -248,7 +248,7 @@ export default function AssistantPage() {
             <div className="min-w-0">
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white flex items-center gap-2">
                 <Brain className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-yellow-500 shrink-0" />
-                <span className="truncate">EMDPOS Intelligence</span>
+                <span className="truncate">HOODMART Intelligence</span>
               </h1>
               <p className="text-xs sm:text-sm text-zinc-400 mt-1">Ask questions about your business and get AI-powered insights.</p>
             </div>
@@ -316,7 +316,7 @@ export default function AssistantPage() {
                     <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-full bg-yellow-500/10 flex items-center justify-center mb-3 sm:mb-4">
                       <Sparkles className="h-7 w-7 sm:h-8 sm:w-8 text-yellow-500" />
                     </div>
-                    <h2 className="text-lg sm:text-xl font-bold text-white mb-2">Ask EMDPOS Intelligence</h2>
+                    <h2 className="text-lg sm:text-xl font-bold text-white mb-2">Ask HOODMART Intelligence</h2>
                     <p className="text-sm text-zinc-400 mb-4 sm:mb-6 max-w-md">
                       Get instant answers about your sales, products, inventory, customers, and business performance.
                     </p>

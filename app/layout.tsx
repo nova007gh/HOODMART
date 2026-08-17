@@ -7,7 +7,7 @@ import { Providers } from './providers'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'EMDPOS Retail OS 2.0',
+  title: 'HOODMART Retail OS 2.0',
   description: 'Modern Point of Sale System for Retail Businesses',
   manifest: '/manifest.json',
 }
@@ -26,7 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                var t = localStorage.getItem('emdpos_theme');
+                var t = localStorage.getItem('hoodmart_theme');
                 if (t === 'white') document.documentElement.classList.add('theme-white');
               } catch (e) {}
             `,
