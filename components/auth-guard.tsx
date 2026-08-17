@@ -7,7 +7,7 @@ import { hasPermission } from '@/lib/auth'
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false)
-  const { isAuthenticated, loading } = useAuth()
+  const { isAuthenticated, loading, syncing } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
@@ -30,6 +30,17 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   if (!isAuthenticated) {
     return null
+  }
+
+  if (syncing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-zinc-900 text-zinc-400">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mx-auto mb-4"></div>
+          <p>Syncing your data from HOODMART…</p>
+        </div>
+      </div>
+    )
   }
 
   return <>{children}</>

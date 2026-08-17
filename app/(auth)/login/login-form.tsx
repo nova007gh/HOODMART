@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { login, register } from '@/lib/auth'
+import { syncNow } from '@/lib/sync'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -35,6 +36,8 @@ export default function LoginForm() {
       const result = await register(email, password, storeName || name || email, 'admin', ['*'])
       if (result.ok) {
         toast.success('Account created! Welcome to HOODMART.')
+        // Pull any existing data from Supabase into localStorage
+        try { await syncNow() } catch (e) { console.warn('Initial sync failed:', e) }
         router.push('/dashboard')
       } else {
         const errMsg = result.error && result.error !== '{}' ? result.error : 'Registration failed. Please try again.'
@@ -43,7 +46,9 @@ export default function LoginForm() {
     } else {
       const session = await login(email, password)
       if (session) {
-        toast.success('Welcome back to HOODMART!')
+        toast.success('Welcome back to HOODMART! Syncing your data…')
+        // Pull all data from Supabase into localStorage so the app can display it
+        try { await syncNow() } catch (e) { console.warn('Login sync failed:', e) }
         router.push('/dashboard')
       } else {
         setError('Invalid email or password.')
