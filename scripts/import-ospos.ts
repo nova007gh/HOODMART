@@ -603,19 +603,19 @@ async function insertAll(
     appConfig: AppConfigRow[]
   }
 ) {
-  const tables: [string, any[]][] = [
-    ['app_config', data.appConfig],
-    ['branches', data.branches],
-    ['suppliers', data.suppliers],
-    ['customers', data.customers],
-    ['employees', data.employees],
-    ['products', data.products],
-    ['activities', data.activities],
-    ['gift_cards', data.giftCards],
-    ['sales', data.sales],
+  const tables: [string, any[], string][] = [
+    ['app_config', data.appConfig, 'key'],
+    ['branches', data.branches, 'id'],
+    ['suppliers', data.suppliers, 'id'],
+    ['customers', data.customers, 'id'],
+    ['employees', data.employees, 'id'],
+    ['products', data.products, 'id'],
+    ['activities', data.activities, 'id'],
+    ['gift_cards', data.giftCards, 'id'],
+    ['sales', data.sales, 'id'],
   ]
 
-  for (const [table, rows] of tables) {
+  for (const [table, rows, conflictCol] of tables) {
     if (!rows.length) {
       console.log(`  ${table}: 0 rows (skipped)`)
       continue
@@ -625,7 +625,7 @@ async function insertAll(
     let inserted = 0
     for (let i = 0; i < rows.length; i += BATCH) {
       const batch = rows.slice(i, i + BATCH)
-      const { error } = await admin.from(table).upsert(batch, { onConflict: 'id' })
+      const { error } = await admin.from(table).upsert(batch, { onConflict: conflictCol })
       if (error) throw new Error(`Insert into ${table} failed at batch ${i}: ${error.message}`)
       inserted += batch.length
     }
