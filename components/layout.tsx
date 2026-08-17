@@ -173,8 +173,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           <SubscriptionGuard>{children}</SubscriptionGuard>
         </div>
         <footer className="mt-auto px-4 py-3 border-t border-zinc-800 text-xs text-zinc-500 text-center space-y-1">
-          <p>© EMD POS 2026, All rights reserved. MDLab Enterprise.</p>
-          <p>Tel: 0244-6475-10 | www.emdulab.com | admin@emdulab.com</p>
+          <p>© HOODMART Retail OS 2026, All rights reserved.</p>
+          <p>hoodmart@gmail.com</p>
         </footer>
       </main>
       {/* Floating Nova AI button — hidden on POS which has its own Sales AI */}

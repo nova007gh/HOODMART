@@ -302,10 +302,10 @@ function addSummaryFooter(doc: jsPDF, startY: number, totalTransactions: number,
 }
 
 function addFooter(doc: jsPDF) {
-  const phone = '0244-6475-10'
-  const website = 'www.emdulab.com'
-  const email = 'admin@emdulab.com'
-  const copyright = 'EMD POS 2026, All rights reserved.'
+  const phone = ''
+  const website = ''
+  const email = 'hoodmart@gmail.com'
+  const copyright = 'HOODMART Retail OS 2026, All rights reserved.'
 
   const pageCount = doc.getNumberOfPages()
   const pageWidth = doc.internal.pageSize.getWidth()

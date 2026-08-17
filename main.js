@@ -121,8 +121,8 @@ function createMenu() {
     {
       label: 'Help',
       submenu: [
-        { label: 'About HOODMART', click: () => shell.openExternal('https://www.emdulab.com') },
-        { label: 'Support', click: () => shell.openExternal('mailto:admin@emdulab.com') },
+        { label: 'About HOODMART', click: () => shell.openExternal('https://hoodmart.vercel.app') },
+        { label: 'Support', click: () => shell.openExternal('mailto:hoodmart@gmail.com') },
       ],
     },
   ]
