@@ -97,6 +97,11 @@ export default function POSPage() {
     if (expired.length) toast(`${expired.length} item(s) in cart are past their expiry date.`, { icon: '⚠️' })
     if (expiring.length) toast(`${expiring.length} item(s) expire within 3 days.`, { icon: '⚠️' })
     const session = getSession()
+    // Use the employee record name (preferred) so sales are attributed
+    // consistently even if the session name is a short version.
+    const emp = session?.user.email
+      ? store.getEmployees().find((e) => e.email?.toLowerCase() === session!.user.email.toLowerCase())
+      : undefined
     const sale: Sale = {
       id: Math.random().toString(36).slice(2) + Date.now().toString(36),
       items: cart.map((i) => ({ ...i })),
@@ -107,7 +112,7 @@ export default function POSPage() {
       paymentMethod,
       branchId: branchId || undefined,
       userEmail: session?.user.email,
-      userName: session?.user.name,
+      userName: emp?.name || session?.user.name,
     }
     store.addSale(sale)
     setCart([])

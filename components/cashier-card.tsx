@@ -33,12 +33,22 @@ export function CashierCard({ refreshKey = 0 }: { refreshKey?: number }) {
       phone: emp?.phone || user.phone,
     })
 
-    // Today's takings for THIS person only
+    // Today's takings for THIS person only.
+    // Match by email (preferred) OR by name (fallback — many sales have
+    // empty userEmail but a userName that matches the cashier).
     const today = new Date().toISOString().slice(0, 10)
+    const myName = (emp?.name || user.name || '').toLowerCase()
+    const myEmail = (user.email || '').toLowerCase()
     const mine = store
       .getSales()
       .filter((s) => String(s.timestamp || '').slice(0, 10) === today)
-      .filter((s) => (s.userEmail || '').toLowerCase() === user.email)
+      .filter((s) => {
+        const sEmail = (s.userEmail || '').toLowerCase()
+        const sName = (s.userName || '').toLowerCase()
+        if (myEmail && sEmail === myEmail) return true
+        if (myName && sName && (sName === myName || sName.includes(myName) || myName.includes(sName))) return true
+        return false
+      })
     setStats({
       count: mine.length,
       total: mine.reduce((sum, s) => sum + (s.total || 0), 0),
