@@ -8,11 +8,12 @@ import { Button } from '@/components/ui/button'
 import { store, Product, Sale, money, formatDate } from '@/lib/store'
 import { useAuth } from '@/hooks/useAuth'
 import { hasPermission } from '@/lib/auth'
+import * as sync from '@/lib/sync'
 import {
   ShoppingCart, Package, TrendingUp, DollarSign, BarChart3,
   AlertTriangle, Calendar, ArrowUpRight, ArrowDownRight,
   CreditCard, Brain, ChevronLeft, ChevronRight, Users,
-  Wallet, Activity, Search, Gift, Smartphone, Receipt
+  Wallet, Activity, Search, Gift, Smartphone, Receipt, Package as PackageIcon, User
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -114,7 +115,28 @@ export default function DashboardPage() {
   const { session } = useAuth()
   const user = session?.user ?? null
 
-  useEffect(() => { setSales(store.getSales()); setProducts(store.getProducts()) }, []);
+  const reload = () => { setSales(store.getSales()); setProducts(store.getProducts()) }
+
+  useEffect(() => {
+    reload()
+    // Refresh from local storage every 10s so new sales made by cashiers
+    // on this device show up on the admin dashboard without a page reload.
+    const interval = setInterval(reload, 10000)
+    // Pull from Supabase every 30s so sales from other cashier terminals /
+    // devices appear on the admin dashboard in near-real-time.
+    const remoteInterval = setInterval(async () => {
+      await sync.pullRemote().catch(() => {})
+      reload()
+    }, 30000)
+    // Also listen for cross-tab storage changes (sales made on other tabs)
+    const onStorage = () => reload()
+    window.addEventListener('storage', onStorage)
+    return () => {
+      clearInterval(interval)
+      clearInterval(remoteInterval)
+      window.removeEventListener('storage', onStorage)
+    }
+  }, [])
 
   const canManageProducts = hasPermission(user, 'manage_products')
   const canManageInventory = hasPermission(user, 'manage_inventory')
@@ -125,6 +147,7 @@ export default function DashboardPage() {
   const today = new Date().toISOString().slice(0, 10)
   const todaySales = sales.filter((s) => s.timestamp.startsWith(today))
   const todayRevenue = todaySales.reduce((sum, s) => sum + s.total, 0)
+  const todayItemsSold = todaySales.reduce((sum, s) => sum + s.items.reduce((a, i) => a + i.qty, 0), 0)
   const totalRevenue = sales.reduce((sum, s) => sum + s.total, 0)
   const avgOrder = sales.length ? totalRevenue / sales.length : 0
   const totalItems = products.reduce((sum, p) => sum + (p.stock ?? 0), 0)
@@ -302,16 +325,23 @@ export default function DashboardPage() {
           <Card className="glass-card border-yellow-500/20 mb-8 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-yellow-500/10 to-transparent rounded-bl-full" />
             <CardContent className="p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-yellow-500/10">
-                  <Receipt className="h-5 w-5 text-yellow-500" />
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-yellow-500/10">
+                    <Receipt className="h-5 w-5 text-yellow-500" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-white">Today&apos;s Sales</h2>
+                    <p className="text-xs text-zinc-500">{new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-lg font-bold text-white">Today&apos;s Sales</h2>
-                  <p className="text-xs text-zinc-500">{new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                </div>
+                <button onClick={reload} className="text-xs text-zinc-400 hover:text-yellow-400 transition-colors flex items-center gap-1">
+                  <Activity className="h-3 w-3" /> Refresh
+                </button>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+
+              {/* Summary stats */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
                 <div className="p-3 rounded-lg bg-zinc-900/60 border border-zinc-800">
                   <p className="text-xs text-zinc-500 mb-1">Revenue Today</p>
                   <p className="text-2xl font-bold gold-text">{money(todayRevenue)}</p>
@@ -322,29 +352,60 @@ export default function DashboardPage() {
                 </div>
                 <div className="p-3 rounded-lg bg-zinc-900/60 border border-zinc-800">
                   <p className="text-xs text-zinc-500 mb-1">Items Sold</p>
-                  <p className="text-2xl font-bold text-white">{todaySales.reduce((s, sale) => s + sale.items.reduce((a, i) => a + i.qty, 0), 0)}</p>
+                  <p className="text-2xl font-bold text-white">{todayItemsSold}</p>
                 </div>
                 <div className="p-3 rounded-lg bg-zinc-900/60 border border-zinc-800">
                   <p className="text-xs text-zinc-500 mb-1">Avg Sale</p>
                   <p className="text-2xl font-bold text-white">{todaySales.length ? money(todayRevenue / todaySales.length) : money(0)}</p>
                 </div>
               </div>
+
+              {/* Items sold today — full breakdown with item name, cashier, amount */}
               {todaySales.length > 0 && (
-                <div className="mt-4 space-y-1.5 max-h-40 overflow-y-auto pr-1">
-                  {todaySales.slice(0, 8).map((sale) => (
-                    <div key={sale.id} className="flex items-center justify-between text-sm p-2 rounded bg-zinc-900/40 border border-zinc-800/50">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-yellow-400 font-mono text-xs">#{sale.id.slice(0, 6).toUpperCase()}</span>
-                        <span className="text-zinc-400 text-xs truncate">{sale.userName || 'Walk-in'}</span>
-                        <span className="text-zinc-600 text-xs capitalize">{sale.paymentMethod}</span>
+                <div className="border-t border-zinc-800 pt-4">
+                  <h3 className="text-sm font-semibold text-zinc-300 mb-3 flex items-center gap-2">
+                    <PackageIcon className="h-4 w-4 text-yellow-500" /> Items Sold Today
+                  </h3>
+                  <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                    {/* Per-sale breakdown: each sale shows cashier, time, and every item */}
+                    {todaySales.map((sale) => (
+                      <div key={sale.id} className="rounded-lg bg-zinc-900/60 border border-zinc-800 overflow-hidden">
+                        {/* Sale header: cashier + time + total */}
+                        <div className="flex items-center justify-between px-3 py-2 bg-zinc-900/80 border-b border-zinc-800">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="h-6 w-6 rounded-full bg-yellow-500/10 flex items-center justify-center shrink-0">
+                              <User className="h-3 w-3 text-yellow-500" />
+                            </div>
+                            <span className="text-sm font-medium text-white truncate">{sale.userName || 'Walk-in'}</span>
+                            <span className="text-xs text-zinc-500">{new Date(sale.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            <span className="text-xs text-zinc-600 capitalize">· {sale.paymentMethod}</span>
+                          </div>
+                          <span className="text-sm font-bold gold-text shrink-0">{money(sale.total)}</span>
+                        </div>
+                        {/* Item list for this sale */}
+                        <div className="px-3 py-2 space-y-1">
+                          {sale.items.map((item) => (
+                            <div key={item.id + item.name} className="flex items-center justify-between text-sm">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <PackageIcon className="h-3 w-3 text-zinc-600 shrink-0" />
+                                <span className="text-zinc-200 truncate">{item.name}</span>
+                                <span className="text-zinc-500 text-xs shrink-0">×{item.qty}</span>
+                              </div>
+                              <span className="text-zinc-300 shrink-0">{money(item.price * item.qty)}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <span className="text-white font-medium text-sm">{money(sale.total)}</span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
               {todaySales.length === 0 && (
-                <p className="mt-4 text-sm text-zinc-500 text-center py-3">No sales recorded today yet.</p>
+                <div className="mt-4 text-center py-8 border-t border-zinc-800">
+                  <Receipt className="h-8 w-8 text-zinc-700 mx-auto mb-2" />
+                  <p className="text-sm text-zinc-500">No sales recorded today yet.</p>
+                  <p className="text-xs text-zinc-600 mt-1">Sales will appear here automatically as they happen.</p>
+                </div>
               )}
             </CardContent>
           </Card>
