@@ -6,7 +6,8 @@ import { DashboardLayout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { store, Product, money } from '@/lib/store'
-import { Search, Package, Plus, X, Camera, Calendar, AlertTriangle, Edit2, Trash2, Save, Image as ImageIcon } from 'lucide-react'
+import { optimizeImage, formatBytes } from '@/lib/image'
+import { Search, Package, Plus, X, Camera, Calendar, AlertTriangle, Edit2, Trash2, Save, Image as ImageIcon, Loader2 } from 'lucide-react'
 import { Pagination } from '@/components/pagination'
 import toast from 'react-hot-toast'
 
@@ -66,6 +67,7 @@ export default function ProductsPage() {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Product | null>(null)
   const [form, setForm] = useState<ProductForm>(emptyForm)
+  const [uploadingImg, setUploadingImg] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(12)
@@ -121,16 +123,35 @@ export default function ProductsPage() {
     setOpen(true)
   }
 
-  const onImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
+    e.target.value = ''
     if (!file) return
-    if (file.size > 1024 * 1024) {
-      toast.error('Image too large. Use a file under 1MB.')
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please choose an image file (PNG, JPG, or WebP)')
       return
     }
-    const reader = new FileReader()
-    reader.onload = (ev) => setForm((f) => ({ ...f, image: ev.target?.result as string }))
-    reader.readAsDataURL(file)
+    if (file.size > 12 * 1024 * 1024) {
+      toast.error(`Image is ${formatBytes(file.size)} — please pick one under 12MB`)
+      return
+    }
+    setUploadingImg(true)
+    try {
+      const result = await optimizeImage(file, {
+        maxSize: 600,
+        square: false,
+        maxBytes: 150 * 1024, // 150KB cap — crisp on a product card at any density
+        quality: 0.82,
+        format: 'auto',
+      })
+      setForm((f) => ({ ...f, image: result.dataUrl }))
+      const pct = Math.round(((file.size - result.bytes) / file.size) * 100)
+      toast.success(`Image optimised — ${formatBytes(result.bytes)} (${pct}% smaller)`)
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not process that image')
+    } finally {
+      setUploadingImg(false)
+    }
   }
 
   const submit = (e: React.FormEvent) => {
@@ -280,14 +301,30 @@ export default function ProductsPage() {
                     <label className="text-xs text-zinc-400">Product Image</label>
                     <div className="flex items-center gap-4">
                       <div className="h-20 w-20 rounded-lg bg-zinc-900 border border-zinc-700 flex items-center justify-center overflow-hidden">
-                        {form.image ? <img src={form.image} alt="preview" className="h-full w-full object-cover" /> : <Camera className="h-8 w-8 text-zinc-600" />}
+                        {uploadingImg ? (
+                          <Loader2 className="h-6 w-6 animate-spin text-yellow-500" />
+                        ) : form.image ? (
+                          <img src={form.image} alt="preview" className="h-full w-full object-cover" />
+                        ) : (
+                          <Camera className="h-8 w-8 text-zinc-600" />
+                        )}
                       </div>
                       <div className="flex-1">
                         <input ref={fileRef} type="file" accept="image/*" onChange={onImage} className="hidden" />
-                        <Button type="button" onClick={() => fileRef.current?.click()} variant="outline" className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
-                          <Camera className="h-4 w-4 mr-2" /> Upload Image
+                        <Button
+                          type="button"
+                          onClick={() => fileRef.current?.click()}
+                          disabled={uploadingImg}
+                          variant="outline"
+                          className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                        >
+                          {uploadingImg ? (
+                            <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Optimising…</>
+                          ) : (
+                            <><Camera className="h-4 w-4 mr-2" /> Upload Image</>
+                          )}
                         </Button>
-                        <p className="text-xs text-zinc-500 mt-1">Max 1MB. Stored locally.</p>
+                        <p className="text-xs text-zinc-500 mt-1">Auto-resized to 600px · max 12MB · optimised to ~150KB</p>
                       </div>
                     </div>
                   </div>

@@ -7,45 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { store } from '@/lib/store'
 import { getSession, updateSessionUser } from '@/lib/auth'
-import { Camera, Loader2, Mail, Phone, Shield, Trash2, User as UserIcon } from 'lucide-react'
+import { optimizeImage, formatBytes } from '@/lib/image'
+import { Camera, Loader2, Mail, Phone, Shield, Trash2, UploadCloud, User as UserIcon } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-const AVATAR_SIZE = 256
-const MAX_UPLOAD_BYTES = 8 * 1024 * 1024
-
-/** Downscale + centre-crop an image file to a square JPEG data URL. */
-function fileToAvatar(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onerror = () => reject(new Error('Could not read that file'))
-    reader.onload = () => {
-      const img = new Image()
-      img.onerror = () => reject(new Error('That file is not a valid image'))
-      img.onload = () => {
-        const canvas = document.createElement('canvas')
-        canvas.width = AVATAR_SIZE
-        canvas.height = AVATAR_SIZE
-        const ctx = canvas.getContext('2d')
-        if (!ctx) return reject(new Error('Canvas not supported'))
-        const side = Math.min(img.width, img.height)
-        ctx.drawImage(
-          img,
-          (img.width - side) / 2,
-          (img.height - side) / 2,
-          side,
-          side,
-          0,
-          0,
-          AVATAR_SIZE,
-          AVATAR_SIZE
-        )
-        resolve(canvas.toDataURL('image/jpeg', 0.82))
-      }
-      img.src = reader.result as string
-    }
-    reader.readAsDataURL(file)
-  })
-}
+const MAX_UPLOAD_BYTES = 12 * 1024 * 1024
 
 export default function ProfilePage() {
   const [name, setName] = useState('')
@@ -55,6 +21,8 @@ export default function ProfilePage() {
   const [avatar, setAvatar] = useState<string | undefined>()
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
+  const [sizeInfo, setSizeInfo] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -72,18 +40,32 @@ export default function ProfilePage() {
 
   const pickFile = () => fileRef.current?.click()
 
-  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    e.target.value = ''
+  const handleFile = async (file: File) => {
     if (!file) return
-    if (!file.type.startsWith('image/')) return toast.error('Please choose an image file')
-    if (file.size > MAX_UPLOAD_BYTES) return toast.error('Image must be smaller than 8MB')
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please choose an image file (PNG, JPG, or WebP)')
+      return
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      toast.error(`Image is ${formatBytes(file.size)} — please pick one under ${formatBytes(MAX_UPLOAD_BYTES)}`)
+      return
+    }
 
     setUploading(true)
+    setSizeInfo(null)
     try {
-      const dataUrl = await fileToAvatar(file)
-      setAvatar(dataUrl)
-      toast.success('Picture ready — press Save to apply')
+      const result = await optimizeImage(file, {
+        maxSize: 200,
+        square: true,
+        maxBytes: 60 * 1024, // 60KB cap — plenty for a 64px display at 3x retina
+        quality: 0.82,
+        format: 'auto',
+      })
+      setAvatar(result.dataUrl)
+      const saved = file.size - result.bytes
+      const pct = Math.round((saved / file.size) * 100)
+      setSizeInfo(`${formatBytes(file.size)} → ${formatBytes(result.bytes)} (${pct}% smaller)`)
+      toast.success(`Picture optimised — ${formatBytes(result.bytes)}`)
     } catch (err: any) {
       toast.error(err?.message || 'Could not process that image')
     } finally {
@@ -91,8 +73,37 @@ export default function ProfilePage() {
     }
   }
 
+  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (file) handleFile(file)
+  }
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) handleFile(file)
+  }
+
+  const onPaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items
+    if (!items) return
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile()
+        if (file) {
+          handleFile(file)
+          break
+        }
+      }
+    }
+  }
+
   const removePicture = () => {
     setAvatar(undefined)
+    setSizeInfo(null)
     toast('Picture removed — press Save to apply', { icon: '🗑️' })
   }
 
@@ -170,22 +181,62 @@ export default function ProfilePage() {
                     </button>
                   </div>
 
-                  <div className="min-w-0 flex-1 text-center sm:text-left">
-                    <p className="text-sm text-zinc-300">
-                      Use a clear photo of your face. Images are cropped to a square and resized
-                      automatically.
-                    </p>
-                    <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
-                      <Button
-                        type="button"
-                        onClick={pickFile}
-                        disabled={uploading}
-                        variant="outline"
-                        className="border-zinc-700 text-zinc-200 hover:bg-zinc-800"
-                      >
-                        <Camera className="mr-2 h-4 w-4" /> Choose Photo
-                      </Button>
-                      {avatar && (
+                  <div
+                    onPaste={onPaste}
+                    className="min-w-0 flex-1"
+                    tabIndex={0}
+                  >
+                    <div
+                      onClick={pickFile}
+                      onDragOver={(e) => {
+                        e.preventDefault()
+                        setDragOver(true)
+                      }}
+                      onDragLeave={() => setDragOver(false)}
+                      onDrop={onDrop}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && pickFile()}
+                      className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-5 text-center transition-colors ${
+                        dragOver
+                          ? 'border-yellow-500 bg-yellow-500/10'
+                          : 'border-zinc-700 hover:border-zinc-600 hover:bg-zinc-800/40'
+                      } ${uploading ? 'pointer-events-none opacity-70' : ''}`}
+                    >
+                      {uploading ? (
+                        <>
+                          <Loader2 className="h-6 w-6 animate-spin text-yellow-500" />
+                          <p className="mt-2 text-sm text-zinc-300">Optimising image…</p>
+                        </>
+                      ) : (
+                        <>
+                          <UploadCloud className="h-6 w-6 text-zinc-400" />
+                          <p className="mt-2 text-sm text-zinc-300">
+                            <span className="font-medium text-yellow-500">Click to upload</span> · drag & drop · or paste
+                          </p>
+                          <p className="mt-1 text-xs text-zinc-500">
+                            Auto-resized to 200×200 · max {formatBytes(MAX_UPLOAD_BYTES)}
+                          </p>
+                        </>
+                      )}
+                    </div>
+
+                    {sizeInfo && (
+                      <p className="mt-2 text-center text-xs text-emerald-400 sm:text-left">
+                        {sizeInfo}
+                      </p>
+                    )}
+
+                    {avatar && !uploading && (
+                      <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
+                        <Button
+                          type="button"
+                          onClick={pickFile}
+                          variant="outline"
+                          className="border-zinc-700 text-zinc-200 hover:bg-zinc-800"
+                        >
+                          <Camera className="mr-2 h-4 w-4" /> Replace
+                        </Button>
                         <Button
                           type="button"
                           onClick={removePicture}
@@ -194,8 +245,8 @@ export default function ProfilePage() {
                         >
                           <Trash2 className="mr-2 h-4 w-4" /> Remove
                         </Button>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <input
