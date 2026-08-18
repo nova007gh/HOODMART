@@ -1,5 +1,6 @@
 import { getSession, getStoreId } from '@/lib/auth'
 import * as sync from '@/lib/sync'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 
 export type NotificationType =
   | 'sale'
@@ -100,6 +101,57 @@ export const notifications = {
       /* never break the caller */
     }
   },
+}
+
+/**
+ * Pull notifications from Supabase and merge with local ones.
+ * This lets the admin see sales made on other devices/cashier terminals.
+ * Returns true if new notifications were added.
+ */
+export async function pullRemoteNotifications(): Promise<boolean> {
+  if (!isSupabaseConfigured() || !supabase) return false
+  const storeId = getStoreId()
+  if (!storeId) return false
+  try {
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('store_id', storeId)
+      .order('timestamp', { ascending: false })
+      .limit(MAX_STORED)
+    if (error || !Array.isArray(data)) return false
+    const local = get()
+    const localIds = new Set(local.map((n) => n.id))
+    let added = false
+    for (const remote of data) {
+      if (!localIds.has(remote.id)) {
+        // Ensure required fields exist
+        const n: AppNotification = {
+          id: remote.id,
+          type: (remote.type as NotificationType) || 'sale',
+          title: remote.title || 'Notification',
+          message: remote.message || '',
+          actorName: remote.actorName || 'Unknown',
+          actorEmail: remote.actorEmail || '',
+          amount: remote.amount ?? undefined,
+          href: remote.href ?? undefined,
+          read: remote.read ?? false,
+          timestamp: remote.timestamp || new Date().toISOString(),
+          store_id: remote.store_id,
+        }
+        local.push(n)
+        added = true
+      }
+    }
+    if (added) {
+      // Sort newest first and cap
+      local.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      set(local.slice(0, MAX_STORED))
+    }
+    return added
+  } catch {
+    return false
+  }
 }
 
 /** Subscribe to notification changes (same-tab + cross-tab). */

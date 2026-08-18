@@ -48,7 +48,11 @@ function toNum(v: string) {
 
 function daysUntil(date?: string) {
   if (!date) return Infinity
-  const diff = new Date(date).getTime() - new Date().setHours(0, 0, 0, 0)
+  const parsed = new Date(date)
+  if (isNaN(parsed.getTime())) return Infinity
+  const year = parsed.getFullYear()
+  if (year < 2000 || year > 2100) return Infinity
+  const diff = parsed.getTime() - new Date().setHours(0, 0, 0, 0)
   return Math.ceil(diff / (1000 * 60 * 60 * 24))
 }
 

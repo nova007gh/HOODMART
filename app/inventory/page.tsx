@@ -12,14 +12,18 @@ import Link from 'next/link'
 
 function daysUntil(date?: string) {
   if (!date) return Infinity
-  return Math.ceil((new Date(date).getTime() - new Date().setHours(0, 0, 0, 0)) / (1000 * 60 * 60 * 24))
+  const parsed = new Date(date)
+  if (isNaN(parsed.getTime())) return Infinity
+  const year = parsed.getFullYear()
+  if (year < 2000 || year > 2100) return Infinity
+  return Math.ceil((parsed.getTime() - new Date().setHours(0, 0, 0, 0)) / (1000 * 60 * 60 * 24))
 }
 
 function statusOf(p: Product) {
   const stock = p.stock ?? 0
   const min = p.minStock ?? 0
   const days = daysUntil(p.expiryDate)
-  if (days < 0) return { label: 'Expired', class: 'text-red-400 bg-red-900/20 border-red-500/30' }
+  if (days !== Infinity && days < 0) return { label: 'Expired', class: 'text-red-400 bg-red-900/20 border-red-500/30' }
   if (stock < min) return { label: 'Low Stock', class: 'text-yellow-400 bg-yellow-900/20 border-yellow-500/30' }
   return { label: 'OK', class: 'text-green-400 bg-green-900/20 border-green-500/30' }
 }
@@ -44,8 +48,8 @@ export default function InventoryPage() {
   }, [products, search])
 
   const lowStock = products.filter((p) => (p.stock ?? 0) < (p.minStock ?? 0))
-  const expiring = products.filter((p) => { const d = daysUntil(p.expiryDate); return d >= 0 && d <= 7 })
-  const expired = products.filter((p) => daysUntil(p.expiryDate) < 0)
+  const expiring = products.filter((p) => { const d = daysUntil(p.expiryDate); return d !== Infinity && d >= 0 && d <= 7 })
+  const expired = products.filter((p) => { const d = daysUntil(p.expiryDate); return d !== Infinity && d < 0 })
   const totalValue = products.reduce((sum, p) => sum + (p.stock ?? 0) * (p.cost ?? p.price), 0)
 
   const adjustStock = (id: string, delta: number) => {
@@ -154,7 +158,7 @@ export default function InventoryPage() {
                       </td>
                       <td className="px-4 py-3 text-zinc-400">{p.category || '-'}</td>
                       <td className="px-4 py-3 text-zinc-400">{p.supplier || '-'}</td>
-                      <td className="px-4 py-3 text-zinc-400">{p.expiryDate ? <span className={d < 0 ? 'text-red-400' : d <= 7 ? 'text-yellow-400' : ''}>{p.expiryDate}</span> : '-'}</td>
+                      <td className="px-4 py-3 text-zinc-400">{p.expiryDate ? <span className={d !== Infinity && d < 0 ? 'text-red-400' : d !== Infinity && d <= 7 ? 'text-yellow-400' : ''}>{p.expiryDate}</span> : '-'}</td>
                       <td className="px-4 py-3 text-center font-bold text-white">{p.stock ?? 0}</td>
                       <td className="px-4 py-3 text-center text-zinc-500">{p.minStock ?? 0}</td>
                       <td className="px-4 py-3"><span className={`text-xs px-2 py-1 rounded border ${status.class}`}>{status.label}</span></td>

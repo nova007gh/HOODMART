@@ -12,7 +12,7 @@ import {
   ShoppingCart, Package, TrendingUp, DollarSign, BarChart3,
   AlertTriangle, Calendar, ArrowUpRight, ArrowDownRight,
   CreditCard, Brain, ChevronLeft, ChevronRight, Users,
-  Wallet, Activity, Search, Gift, Smartphone
+  Wallet, Activity, Search, Gift, Smartphone, Receipt
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -28,7 +28,11 @@ function last7Days() {
 
 function daysUntil(date?: string) {
   if (!date) return Infinity
-  return Math.ceil((new Date(date).getTime() - new Date().setHours(0, 0, 0, 0)) / (1000 * 60 * 60 * 24))
+  const parsed = new Date(date)
+  if (isNaN(parsed.getTime())) return Infinity
+  const year = parsed.getFullYear()
+  if (year < 2000 || year > 2100) return Infinity
+  return Math.ceil((parsed.getTime() - new Date().setHours(0, 0, 0, 0)) / (1000 * 60 * 60 * 24))
 }
 
 function GoldBar({ value, max, label, total, isCurrency }: { value: number; max: number; label: string; total?: number; isCurrency?: boolean }) {
@@ -285,13 +289,66 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {canViewReports && (
             <>
-              <KPICard icon={DollarSign} label="Total Sales" value={money(totalRevenue)} change={weekChanges.revenue} changeLabel={`${sales.length} transactions`} />
+              <KPICard icon={DollarSign} label="Total Sales" value={money(totalRevenue)} change={weekChanges.revenue} changeLabel={`${sales.length} transactions (all-time)`} />
               <KPICard icon={ShoppingCart} label="Total Orders" value={sales.length.toLocaleString()} change={weekChanges.orders} changeLabel="All time orders" />
               <KPICard icon={Users} label="Customers" value={uniqueCustomers.toLocaleString()} change={weekChanges.customers} changeLabel="Unique customers" />
               <KPICard icon={Wallet} label="Net Profit" value={money(grossProfit)} change={weekChanges.profit} changeLabel="Estimated margin" accent="bg-green-500/10" />
             </>
           )}
         </div>
+
+        {/* Today's Sales — separated from all-time general sales */}
+        {canViewReports && (
+          <Card className="glass-card border-yellow-500/20 mb-8 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-yellow-500/10 to-transparent rounded-bl-full" />
+            <CardContent className="p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-yellow-500/10">
+                  <Receipt className="h-5 w-5 text-yellow-500" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-white">Today&apos;s Sales</h2>
+                  <p className="text-xs text-zinc-500">{new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="p-3 rounded-lg bg-zinc-900/60 border border-zinc-800">
+                  <p className="text-xs text-zinc-500 mb-1">Revenue Today</p>
+                  <p className="text-2xl font-bold gold-text">{money(todayRevenue)}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-zinc-900/60 border border-zinc-800">
+                  <p className="text-xs text-zinc-500 mb-1">Transactions</p>
+                  <p className="text-2xl font-bold text-white">{todaySales.length}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-zinc-900/60 border border-zinc-800">
+                  <p className="text-xs text-zinc-500 mb-1">Items Sold</p>
+                  <p className="text-2xl font-bold text-white">{todaySales.reduce((s, sale) => s + sale.items.reduce((a, i) => a + i.qty, 0), 0)}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-zinc-900/60 border border-zinc-800">
+                  <p className="text-xs text-zinc-500 mb-1">Avg Sale</p>
+                  <p className="text-2xl font-bold text-white">{todaySales.length ? money(todayRevenue / todaySales.length) : money(0)}</p>
+                </div>
+              </div>
+              {todaySales.length > 0 && (
+                <div className="mt-4 space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                  {todaySales.slice(0, 8).map((sale) => (
+                    <div key={sale.id} className="flex items-center justify-between text-sm p-2 rounded bg-zinc-900/40 border border-zinc-800/50">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-yellow-400 font-mono text-xs">#{sale.id.slice(0, 6).toUpperCase()}</span>
+                        <span className="text-zinc-400 text-xs truncate">{sale.userName || 'Walk-in'}</span>
+                        <span className="text-zinc-600 text-xs capitalize">{sale.paymentMethod}</span>
+                      </div>
+                      <span className="text-white font-medium text-sm">{money(sale.total)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {todaySales.length === 0 && (
+                <p className="mt-4 text-sm text-zinc-500 text-center py-3">No sales recorded today yet.</p>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Sales Chart + Top Products */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">

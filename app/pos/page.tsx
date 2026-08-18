@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { store, Product, Discount, CartItem, computeTotals, money, Sale, Branch, formatDateTime } from '@/lib/store'
 import { getSession, hasPermission, PERMISSIONS } from '@/lib/auth'
 import { notifications, emailAdmin } from '@/lib/notifications'
-import { Search, ShoppingCart, Plus, Minus, Trash2, CreditCard, Printer, X, Banknote, AlertTriangle, Image as ImageIcon, Calendar, Archive, FolderOpen, Building2, Mail } from 'lucide-react'
+import { Search, ShoppingCart, Plus, Minus, Trash2, CreditCard, Printer, X, Banknote, AlertTriangle, Image as ImageIcon, Calendar, Archive, FolderOpen, Building2, Mail, CheckCircle } from 'lucide-react'
 import { POSAIAssistant } from '@/components/pos-ai-assistant'
 import { CashierCard } from '@/components/cashier-card'
 import { Pagination } from '@/components/pagination'
@@ -77,14 +77,23 @@ export default function POSPage() {
 
   const daysUntil = (date?: string) => {
     if (!date) return Infinity
-    return Math.ceil((new Date(date).getTime() - new Date().setHours(0, 0, 0, 0)) / (1000 * 60 * 60 * 24))
+    const parsed = new Date(date)
+    if (isNaN(parsed.getTime())) return Infinity
+    // Sanity check: dates before year 2000 or after 2100 are almost certainly
+    // data-entry errors (e.g. "0027-08-10" instead of "2027-08-10"). Treat
+    // them as "no expiry" rather than marking the product as expired.
+    const year = parsed.getFullYear()
+    if (year < 2000 || year > 2100) return Infinity
+    return Math.ceil((parsed.getTime() - new Date().setHours(0, 0, 0, 0)) / (1000 * 60 * 60 * 24))
   }
 
-  const checkout = () => {
+  const checkout = (withPrint: boolean = false) => {
     if (cart.length === 0) return toast.error('Cart is empty')
     const expired = cart.filter((i) => daysUntil(i.expiryDate) < 0)
     const expiring = cart.filter((i) => { const d = daysUntil(i.expiryDate); return d >= 0 && d <= 3 })
-    if (expired.length) return toast.error(`${expired.length} item(s) in cart are expired. Remove them before checkout.`, { icon: '🚫' })
+    // Warn about expired/expiring items but DO NOT block the sale — the
+    // sales girl needs to process transactions smoothly.
+    if (expired.length) toast(`${expired.length} item(s) in cart are past their expiry date.`, { icon: '⚠️' })
     if (expiring.length) toast(`${expiring.length} item(s) expire within 3 days.`, { icon: '⚠️' })
     const session = getSession()
     const sale: Sale = {
@@ -102,7 +111,6 @@ export default function POSPage() {
     store.addSale(sale)
     setCart([])
     setDiscountId('')
-    setReceipt(sale)
     reload()
     setSalesTick((t) => t + 1)
 
@@ -111,11 +119,17 @@ export default function POSPage() {
     notifications.push(
       'sale',
       'Sale completed',
-      `${itemCount} item${itemCount === 1 ? '' : 's'} sold via ${sale.paymentMethod}`,
+      `${itemCount} item${itemCount === 1 ? '' : 's'} sold via ${sale.paymentMethod} by ${session?.user.name || 'staff'}`,
       { amount: sale.total, href: `/receipt/${sale.id}` }
     )
 
     handleEmails(sale)
+
+    if (withPrint) {
+      setReceipt(sale)
+    } else {
+      toast.success(`Sale completed — ${money(sale.total)}`, { icon: '✅' })
+    }
   }
 
   const receiptHtml = (s: Sale) => `
@@ -248,7 +262,23 @@ export default function POSPage() {
     toast.success('Product added')
   }
 
-  const printReceipt = () => receipt && window.open(`/receipt/${receipt.id}`, '_blank')
+  const printReceipt = () => {
+    if (!receipt) return
+    // Print directly from this page — no new tab. The @media print CSS
+    // hides everything except .print-receipt-content when body.printing
+    // is set. This avoids the page refresh / logout bug that happened
+    // when window.open() loaded the receipt in a new tab.
+    document.body.classList.add('printing')
+    window.print()
+    // Clean up after the print dialog closes
+    const cleanup = () => {
+      document.body.classList.remove('printing')
+      window.removeEventListener('afterprint', cleanup)
+    }
+    window.addEventListener('afterprint', cleanup)
+    // Fallback cleanup in case afterprint doesn't fire
+    setTimeout(() => document.body.classList.remove('printing'), 1000)
+  }
 
   return (
     <AuthGuard>
@@ -291,8 +321,8 @@ export default function POSPage() {
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3">
                   {paginated.map((p) => {
-                    const expiryDays = p.expiryDate ? Math.ceil((new Date(p.expiryDate).getTime() - new Date().setHours(0,0,0,0)) / (1000 * 60 * 60 * 24)) : Infinity
-                    const expired = expiryDays < 0
+                    const expiryDays = daysUntil(p.expiryDate)
+                    const expired = expiryDays !== Infinity && expiryDays < 0
                     const expiringSoon = expiryDays >= 0 && expiryDays <= 3
                     return (
                       <button key={p.id} onClick={() => addToCart(p)} className={`text-left rounded-lg bg-zinc-900 border overflow-hidden hover:shadow-lg transition-all ${expired ? 'border-red-500/60' : expiringSoon ? 'border-yellow-500/60' : 'border-zinc-700 hover:border-yellow-500/60 hover:shadow-yellow-500/10'}`}>
@@ -397,9 +427,14 @@ export default function POSPage() {
                   <span className="gold-text">{money(totals.total)}</span>
                 </div>
 
-                <Button onClick={checkout} className="w-full gold-gradient text-black font-bold" disabled={cart.length === 0}>
-                  <CreditCard className="h-4 w-4 mr-2" /> Checkout
-                </Button>
+                <div className="flex gap-2">
+                  <Button onClick={() => checkout(false)} className="flex-1 gold-gradient text-black font-bold" disabled={cart.length === 0}>
+                    <CreditCard className="h-4 w-4 mr-2" /> Checkout
+                  </Button>
+                  <Button onClick={() => checkout(true)} variant="outline" className="flex-1 border-yellow-500/40 text-yellow-500 hover:bg-yellow-500/10 font-bold" disabled={cart.length === 0}>
+                    <Printer className="h-4 w-4 mr-2" /> Checkout & Print
+                  </Button>
+                </div>
 
                 {cart.length > 0 && (
                   <form onSubmit={suspendSale} className="space-y-2 border-t border-zinc-800 pt-3">
@@ -475,9 +510,14 @@ export default function POSPage() {
                     <FolderOpen className="h-4 w-4 mr-1" /> Resume
                   </Button>
                 </div>
-                <Button onClick={() => { checkout(); setShowCart(false) }} className="w-full gold-gradient text-black font-bold" disabled={cart.length === 0}>
-                  <CreditCard className="h-4 w-4 mr-2" /> Checkout
-                </Button>
+                <div className="flex gap-2 pb-2">
+                  <Button onClick={() => { checkout(false); setShowCart(false) }} className="flex-1 gold-gradient text-black font-bold" disabled={cart.length === 0}>
+                    <CreditCard className="h-4 w-4 mr-2" /> Checkout
+                  </Button>
+                  <Button onClick={() => { checkout(true); setShowCart(false) }} variant="outline" className="flex-1 border-yellow-500/40 text-yellow-500 hover:bg-yellow-500/10 font-bold" disabled={cart.length === 0}>
+                    <Printer className="h-4 w-4 mr-2" /> & Print
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -510,13 +550,13 @@ export default function POSPage() {
         )}
 
         {receipt && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 no-print">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 no-print print-receipt-overlay">
             <Card className="w-full max-w-md bg-white text-black">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-black text-lg font-bold">HOODMART Receipt</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between no-print">
+                <CardTitle className="text-black text-lg font-bold flex items-center gap-2"><CheckCircle className="h-5 w-5 text-green-600" /> Sale Completed</CardTitle>
                 <button onClick={() => setReceipt(null)} className="text-zinc-500 hover:text-black"><X className="h-5 w-5" /></button>
               </CardHeader>
-              <CardContent className="space-y-3 print-receipt">
+              <CardContent className="space-y-3 print-receipt-content">
                 <div className="text-center border-b border-zinc-300 pb-3">
                   <p className="font-bold text-lg">HOODMART</p>
                   <p className="text-xs text-zinc-500">{new Date(receipt.timestamp).toLocaleString()}</p>
@@ -536,7 +576,11 @@ export default function POSPage() {
                   {receipt.discount > 0 && <div className="flex justify-between"><span>Discount</span><span>-{money(receipt.discount)}</span></div>}
                   <div className="flex justify-between text-lg font-bold"><span>Total</span><span>{money(receipt.total)}</span></div>
                 </div>
-                <Button onClick={printReceipt} className="w-full bg-zinc-900 text-white hover:bg-zinc-800"><Printer className="h-4 w-4 mr-2" /> Print Receipt</Button>
+                <p className="text-center text-xs mt-4 text-zinc-500">Thank you for shopping with us!</p>
+                <div className="flex gap-2 no-print pt-2 border-t border-zinc-300">
+                  <Button onClick={printReceipt} className="flex-1 bg-zinc-900 text-white hover:bg-zinc-800"><Printer className="h-4 w-4 mr-2" /> Print Receipt</Button>
+                  <Button onClick={() => setReceipt(null)} className="flex-1 gold-gradient text-black font-bold"><ShoppingCart className="h-4 w-4 mr-2" /> New Sale</Button>
+                </div>
               </CardContent>
             </Card>
           </div>

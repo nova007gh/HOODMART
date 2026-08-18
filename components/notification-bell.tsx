@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { notifications, onNotificationsChange, AppNotification } from '@/lib/notifications'
+import { notifications, onNotificationsChange, pullRemoteNotifications, AppNotification } from '@/lib/notifications'
 import { money } from '@/lib/store'
 import {
   Bell,
@@ -63,10 +63,20 @@ export function NotificationBell() {
   useEffect(() => {
     refresh()
     const unsub = onNotificationsChange(refresh)
-    const interval = setInterval(refresh, 20000)
+    // Refresh from local storage frequently
+    const interval = setInterval(refresh, 15000)
+    // Pull from Supabase every 30s so the admin sees sales from
+    // other cashier terminals / devices in near-real-time
+    const remoteInterval = setInterval(async () => {
+      const added = await pullRemoteNotifications()
+      if (added) refresh()
+    }, 30000)
+    // Also pull once on mount
+    pullRemoteNotifications().then((added) => { if (added) refresh() })
     return () => {
       unsub()
       clearInterval(interval)
+      clearInterval(remoteInterval)
     }
   }, [])
 

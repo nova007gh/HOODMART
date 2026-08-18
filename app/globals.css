@@ -211,6 +211,25 @@
     .print-break { page-break-after: always; }
     body { background: #fff !important; color: #000 !important; }
     .receipt-page { width: 80mm !important; padding: 4mm !important; margin: 0 auto !important; font-family: monospace !important; box-shadow: none !important; border-radius: 0 !important; }
+
+    /* When printing from the POS page, hide the whole app and only show
+       the in-page receipt modal content (.print-receipt-content). */
+    body.printing > * { display: none !important; }
+    body.printing .print-receipt-overlay { display: flex !important; }
+    body.printing .print-receipt-overlay .print-receipt-content {
+      display: block !important;
+      position: static !important;
+      width: 80mm !important;
+      max-width: 80mm !important;
+      margin: 0 !important;
+      padding: 4mm !important;
+      background: #fff !important;
+      color: #000 !important;
+      font-family: monospace !important;
+      box-shadow: none !important;
+      border-radius: 0 !important;
+    }
+    body.printing .print-receipt-overlay .no-print { display: none !important; }
   }
 
   /* ==========================================================
