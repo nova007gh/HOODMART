@@ -6,6 +6,7 @@ import { DashboardLayout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { store, Sale, Product, money, formatDate } from '@/lib/store'
+import { pullTable } from '@/lib/fresh-data'
 import { generateSalesPDF, generateInventoryPDF, downloadPDF, SalesReportData, InventoryReportData } from '@/lib/reports/pdf'
 import { Calendar, FileText, Printer, TrendingUp, Package, DollarSign, BarChart3, Download, ListChecks, Lightbulb } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils'
@@ -24,23 +25,8 @@ export default function ReportsPage() {
   // Pull from the server-side sync API (bypasses RLS) so the reports
   // page sees all sales from all cashier terminals, not just cached data.
   const pullFromServer = async () => {
-    try {
-      const res = await fetch('/api/sync?table=sales')
-      if (res.ok) {
-        const json = await res.json()
-        if (json.data?.sales && Array.isArray(json.data.sales)) {
-          localStorage.setItem('hoodmart_v2_sales', JSON.stringify(json.data.sales))
-        }
-      }
-      const res2 = await fetch('/api/sync?table=products')
-      if (res2.ok) {
-        const json2 = await res2.json()
-        if (json2.data?.products && Array.isArray(json2.data.products)) {
-          localStorage.setItem('hoodmart_v2_products', JSON.stringify(json2.data.products))
-        }
-      }
-      loadData()
-    } catch { /* ignore */ }
+    await Promise.all([pullTable('sales'), pullTable('products')])
+    loadData()
   }
 
   useEffect(() => {

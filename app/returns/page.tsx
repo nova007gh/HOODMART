@@ -5,6 +5,7 @@ import { AuthGuard } from '@/components/auth-guard'
 import { DashboardLayout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { store, Sale, money } from '@/lib/store'
+import { pullTable } from '@/lib/fresh-data'
 import { Undo2, Receipt } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -13,12 +14,7 @@ export default function ReturnsPage() {
   useEffect(() => {
     setSales(store.getSales())
     // Pull from server so all sales are available for returns
-    fetch('/api/sync?table=sales').then(res => res.json()).then(json => {
-      if (json.data?.sales && Array.isArray(json.data.sales)) {
-        localStorage.setItem('hoodmart_v2_sales', JSON.stringify(json.data.sales))
-        setSales(store.getSales())
-      }
-    }).catch(() => {})
+    pullTable('sales').then(() => setSales(store.getSales()))
   }, [])
 
   const processReturn = (sale: Sale) => {

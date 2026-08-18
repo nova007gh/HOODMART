@@ -6,6 +6,7 @@ import { DashboardLayout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { store, Activity, Product } from '@/lib/store'
+import { ensureFreshData } from '@/lib/fresh-data'
 import { Activity as ActivityIcon, Search, Package, Calendar, User, TrendingUp, TrendingDown } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils'
 
@@ -15,8 +16,9 @@ export default function ActivitiesPage() {
   const [search, setSearch] = useState('')
 
   useEffect(() => {
-    setActivities(store.getActivities())
-    setProducts(store.getProducts())
+    const load = () => { setActivities(store.getActivities()); setProducts(store.getProducts()) }
+    load()
+    ensureFreshData().then(load)
   }, [])
 
   const productMap = useMemo(() => new Map(products.map((p) => [p.id, p])), [products])

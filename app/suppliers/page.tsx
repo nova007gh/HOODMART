@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { store, Supplier } from '@/lib/store'
+import { ensureFreshData } from '@/lib/fresh-data'
 import { Truck, Search, Building2, Phone, Mail, MapPin, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -15,7 +16,7 @@ export default function SuppliersPage() {
   const [search, setSearch] = useState('')
   const [form, setForm] = useState({ name: '', companyName: '', agencyName: '', phone: '', email: '', address: '' })
 
-  useEffect(() => { setSuppliers(store.getSuppliers()) }, [])
+  useEffect(() => { setSuppliers(store.getSuppliers()); ensureFreshData().then(() => setSuppliers(store.getSuppliers())) }, [])
 
   const filtered = useMemo(() => {
     const term = search.toLowerCase()

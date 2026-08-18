@@ -6,6 +6,7 @@ import { DashboardLayout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { store } from '@/lib/store'
+import { ensureFreshData } from '@/lib/fresh-data'
 import { getSession, updateSessionUser } from '@/lib/auth'
 import { optimizeImage, formatBytes } from '@/lib/image'
 import { Camera, Loader2, Mail, Phone, Shield, Trash2, UploadCloud, User as UserIcon } from 'lucide-react'
@@ -26,16 +27,20 @@ export default function ProfilePage() {
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    const session = getSession()
-    if (!session) return
-    const { user } = session
-    setEmail(user.email)
-    setRole(user.role)
-    // Prefer the synced employee record, fall back to the session
-    const emp = store.getEmployees().find((e) => e.email?.toLowerCase() === user.email)
-    setName(emp?.name || user.name || '')
-    setPhone(emp?.phone || user.phone || '')
-    setAvatar(emp?.avatar || user.avatar)
+    const loadProfile = () => {
+      const session = getSession()
+      if (!session) return
+      const { user } = session
+      setEmail(user.email)
+      setRole(user.role)
+      // Prefer the synced employee record, fall back to the session
+      const emp = store.getEmployees().find((e) => e.email?.toLowerCase() === user.email)
+      setName(emp?.name || user.name || '')
+      setPhone(emp?.phone || user.phone || '')
+      setAvatar(emp?.avatar || user.avatar)
+    }
+    loadProfile()
+    ensureFreshData().then(loadProfile)
   }, [])
 
   const pickFile = () => fileRef.current?.click()

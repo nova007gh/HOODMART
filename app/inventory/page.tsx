@@ -6,6 +6,7 @@ import { DashboardLayout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { store, Product, money } from '@/lib/store'
+import { ensureFreshData } from '@/lib/fresh-data'
 import { Package, Search, Plus, Minus, AlertTriangle, Calendar, Image as ImageIcon, Trash2, Archive, TrendingUp } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
@@ -35,7 +36,7 @@ export default function InventoryPage() {
   const [adjust, setAdjust] = useState<{ id: string; amount: string } | null>(null)
 
   const reload = () => setProducts(store.getProducts())
-  useEffect(() => { reload() }, [])
+  useEffect(() => { reload(); ensureFreshData().then(reload) }, [])
 
   const filtered = useMemo(() => {
     const term = search.toLowerCase()

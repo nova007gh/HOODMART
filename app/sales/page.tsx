@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { store, Sale, money } from '@/lib/store'
+import { pullTable } from '@/lib/fresh-data'
 import { formatDateTime } from '@/lib/utils'
 import {
   CreditCard,
@@ -127,16 +128,8 @@ export default function SalesPage() {
   // Pull from server-side sync API (bypasses RLS) so the admin sees
   // sales from all cashier terminals, not just this device.
   const pullFromServer = async () => {
-    try {
-      const res = await fetch('/api/sync?table=sales')
-      if (res.ok) {
-        const json = await res.json()
-        if (json.data?.sales && Array.isArray(json.data.sales)) {
-          localStorage.setItem('hoodmart_v2_sales', JSON.stringify(json.data.sales))
-          loadSales()
-        }
-      }
-    } catch { /* ignore */ }
+    const data = await pullTable('sales')
+    if (data) loadSales()
   }
 
   useEffect(() => {

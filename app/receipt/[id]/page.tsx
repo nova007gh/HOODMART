@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { store, Sale, money } from '@/lib/store'
+import { pullTable } from '@/lib/fresh-data'
 import { formatDateTime } from '@/lib/utils'
 
 export default function ReceiptPage() {
@@ -10,10 +11,19 @@ export default function ReceiptPage() {
   const [sale, setSale] = useState<Sale | undefined>(undefined)
 
   useEffect(() => {
-    const found = store.getSales().find((s) => s.id === id)
-    setSale(found)
-    const t = setTimeout(() => window.print(), 600)
-    return () => clearTimeout(t)
+    const findSale = () => {
+      const found = store.getSales().find((s) => s.id === id)
+      setSale(found)
+      if (found) {
+        const t = setTimeout(() => window.print(), 600)
+        return () => clearTimeout(t)
+      }
+    }
+    findSale()
+    // If not found locally, pull from server and try again
+    if (!store.getSales().find((s) => s.id === id)) {
+      pullTable('sales').then(() => findSale())
+    }
   }, [id])
 
   if (!sale) {

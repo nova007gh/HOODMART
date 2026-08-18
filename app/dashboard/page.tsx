@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { store, Product, Sale, money, formatDate } from '@/lib/store'
 import { useAuth } from '@/hooks/useAuth'
 import { hasPermission } from '@/lib/auth'
+import { pullTable } from '@/lib/fresh-data'
 import {
   ShoppingCart, Package, TrendingUp, DollarSign, BarChart3,
   AlertTriangle, Calendar, ArrowUpRight, ArrowDownRight,
@@ -126,22 +127,7 @@ export default function DashboardPage() {
   const pullAndReload = async () => {
     setSyncing(true)
     try {
-      const res = await fetch('/api/sync?table=sales')
-      if (res.ok) {
-        const json = await res.json()
-        if (json.data?.sales && Array.isArray(json.data.sales)) {
-          // Write the fresh sales to localStorage so store.getSales() picks them up
-          localStorage.setItem('hoodmart_v2_sales', JSON.stringify(json.data.sales))
-        }
-      }
-      // Also pull products so stock levels are fresh
-      const res2 = await fetch('/api/sync?table=products')
-      if (res2.ok) {
-        const json2 = await res2.json()
-        if (json2.data?.products && Array.isArray(json2.data.products)) {
-          localStorage.setItem('hoodmart_v2_products', JSON.stringify(json2.data.products))
-        }
-      }
+      await Promise.all([pullTable('sales'), pullTable('products')])
       reload()
       setLastSynced(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
     } catch {

@@ -79,14 +79,29 @@ function stamp(payload: any) {
 
 async function runRemote(table: string, payload: any, op: SyncOp) {
   if (!isSupabaseConfigured() || !supabase) return
-  if (op === 'delete') {
-    const id = payload?.id ?? payload
-    if (!id) return
-    const { error } = await supabase.from(table).delete().eq('id', id)
-    if (error) throw error
-  } else {
-    const { error } = await supabase.from(table).upsert(stamp(payload))
-    if (error) throw error
+  // Use the server-side push API (bypasses RLS) instead of the client-side
+  // Supabase client which is blocked by RLS policies for writes.
+  try {
+    const res = await fetch('/api/push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ table, payload: stamp(payload), op }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || `Push failed: ${res.status}`)
+    }
+  } catch (e) {
+    // Fall back to direct Supabase client (may fail due to RLS)
+    if (op === 'delete') {
+      const id = payload?.id ?? payload
+      if (!id) return
+      const { error } = await supabase.from(table).delete().eq('id', id)
+      if (error) throw error
+    } else {
+      const { error } = await supabase.from(table).upsert(stamp(payload))
+      if (error) throw error
+    }
   }
 }
 

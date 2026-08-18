@@ -7,6 +7,7 @@ import { DashboardLayout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { store, Branch, Sale, money } from '@/lib/store'
+import { pullTable } from '@/lib/fresh-data'
 import { Store, Plus, MapPin, TrendingUp, ShoppingCart, Users, ArrowRight } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -28,16 +29,8 @@ export default function BranchesPage() {
 
   // Pull from server-side sync API so branch stats reflect all live sales
   const pullFromServer = async () => {
-    try {
-      const res = await fetch('/api/sync?table=sales')
-      if (res.ok) {
-        const json = await res.json()
-        if (json.data?.sales && Array.isArray(json.data.sales)) {
-          localStorage.setItem('hoodmart_v2_sales', JSON.stringify(json.data.sales))
-          reload()
-        }
-      }
-    } catch { /* ignore */ }
+    const data = await pullTable('sales')
+    if (data) reload()
   }
 
   useEffect(() => { reload(); pullFromServer() }, [])

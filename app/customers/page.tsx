@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { store, Customer, money } from '@/lib/store'
+import { ensureFreshData } from '@/lib/fresh-data'
 import { notifications } from '@/lib/notifications'
 import { Users, Plus, Search, Phone, Mail, MapPin, Building2, Trash2, ShoppingBag } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -15,7 +16,7 @@ export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [search, setSearch] = useState('')
   const [form, setForm] = useState({ name: '', phone: '', email: '', address: '', companyName: '' })
-  useEffect(() => { setCustomers(store.getCustomers()) }, [])
+  useEffect(() => { setCustomers(store.getCustomers()); ensureFreshData().then(() => setCustomers(store.getCustomers())) }, [])
 
   const stats = useMemo(() => {
     const purchases = customers.reduce((s, c) => s + c.purchases, 0)

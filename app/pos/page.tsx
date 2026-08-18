@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { store, Product, Discount, CartItem, computeTotals, money, Sale, Branch, formatDateTime } from '@/lib/store'
 import { getSession, hasPermission, PERMISSIONS } from '@/lib/auth'
+import { ensureFreshData } from '@/lib/fresh-data'
 import { notifications, emailAdmin } from '@/lib/notifications'
 import { Search, ShoppingCart, Plus, Minus, Trash2, CreditCard, Printer, X, Banknote, AlertTriangle, Image as ImageIcon, Calendar, Archive, FolderOpen, Building2, Mail, CheckCircle } from 'lucide-react'
 import { POSAIAssistant } from '@/components/pos-ai-assistant'
@@ -38,7 +39,7 @@ export default function POSPage() {
   const [salesTick, setSalesTick] = useState(0)
 
   const reload = () => { setProducts(store.getProducts()); setDiscounts(store.getDiscounts()); setBranches(store.getBranches()) }
-  useEffect(() => { reload() }, [])
+  useEffect(() => { reload(); ensureFreshData().then(reload) }, [])
   useEffect(() => {
     setCanManageProducts(hasPermission(getSession()?.user ?? null, PERMISSIONS.MANAGE_PRODUCTS))
   }, [])

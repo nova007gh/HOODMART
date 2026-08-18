@@ -21,9 +21,11 @@ export async function GET(request: Request) {
 
   const supabase = createClient(url, serviceKey, { auth: { persistSession: false } })
 
-  // Get store_id from query param or default to the known store
+  // Get store_id from query param, cookie, or default to the known store.
+  // The client passes store_id as a query param from the session.
   const { searchParams } = new URL(request.url)
-  const storeId = searchParams.get('store_id') || 'f4c6ecf8-9956-4dfd-9404-b9b81cae5c4d'
+  const cookieStoreId = request.headers.get('x-store-id')
+  const storeId = searchParams.get('store_id') || cookieStoreId || 'f4c6ecf8-9956-4dfd-9404-b9b81cae5c4d'
   const table = searchParams.get('table') // optional: fetch only one table
 
   const tables = table
