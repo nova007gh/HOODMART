@@ -38,7 +38,16 @@ export default function BranchDetailPage() {
   const [sales, setSales] = useState<Sale[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => { setBranch(store.getBranch(id)); setSales(store.getSales()); setLoading(false) }, [id])
+  useEffect(() => {
+    setBranch(store.getBranch(id)); setSales(store.getSales()); setLoading(false)
+    // Pull from server so branch detail shows all live sales
+    fetch('/api/sync?table=sales').then(res => res.json()).then(json => {
+      if (json.data?.sales && Array.isArray(json.data.sales)) {
+        localStorage.setItem('hoodmart_v2_sales', JSON.stringify(json.data.sales))
+        setSales(store.getSales())
+      }
+    }).catch(() => {})
+  }, [id])
 
   const branchSales = useMemo(() => sales.filter((s) => s.branchId === id).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()), [sales, id])
   const revenue = branchSales.reduce((sum, s) => sum + s.total, 0)

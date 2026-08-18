@@ -10,7 +10,16 @@ import toast from 'react-hot-toast'
 
 export default function ReturnsPage() {
   const [sales, setSales] = useState<Sale[]>([])
-  useEffect(() => { setSales(store.getSales()) }, [])
+  useEffect(() => {
+    setSales(store.getSales())
+    // Pull from server so all sales are available for returns
+    fetch('/api/sync?table=sales').then(res => res.json()).then(json => {
+      if (json.data?.sales && Array.isArray(json.data.sales)) {
+        localStorage.setItem('hoodmart_v2_sales', JSON.stringify(json.data.sales))
+        setSales(store.getSales())
+      }
+    }).catch(() => {})
+  }, [])
 
   const processReturn = (sale: Sale) => {
     const all = store.getSales().filter((s) => s.id !== sale.id)

@@ -19,7 +19,34 @@ export default function ReportsPage() {
   const [end, setEnd] = useState(() => new Date().toISOString().slice(0, 10))
   const [generating, setGenerating] = useState(false)
 
-  useEffect(() => { setSales(store.getSales()); setProducts(store.getProducts()) }, [])
+  const loadData = () => { setSales(store.getSales()); setProducts(store.getProducts()) }
+
+  // Pull from the server-side sync API (bypasses RLS) so the reports
+  // page sees all sales from all cashier terminals, not just cached data.
+  const pullFromServer = async () => {
+    try {
+      const res = await fetch('/api/sync?table=sales')
+      if (res.ok) {
+        const json = await res.json()
+        if (json.data?.sales && Array.isArray(json.data.sales)) {
+          localStorage.setItem('hoodmart_v2_sales', JSON.stringify(json.data.sales))
+        }
+      }
+      const res2 = await fetch('/api/sync?table=products')
+      if (res2.ok) {
+        const json2 = await res2.json()
+        if (json2.data?.products && Array.isArray(json2.data.products)) {
+          localStorage.setItem('hoodmart_v2_products', JSON.stringify(json2.data.products))
+        }
+      }
+      loadData()
+    } catch { /* ignore */ }
+  }
+
+  useEffect(() => {
+    loadData()
+    pullFromServer()
+  }, [])
 
   const today = new Date().toISOString().slice(0, 10)
 

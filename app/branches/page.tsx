@@ -25,7 +25,22 @@ export default function BranchesPage() {
   const [form, setForm] = useState({ name: '', location: '' })
 
   const reload = () => { setBranches(store.getBranches()); setSales(store.getSales()) }
-  useEffect(() => { reload() }, [])
+
+  // Pull from server-side sync API so branch stats reflect all live sales
+  const pullFromServer = async () => {
+    try {
+      const res = await fetch('/api/sync?table=sales')
+      if (res.ok) {
+        const json = await res.json()
+        if (json.data?.sales && Array.isArray(json.data.sales)) {
+          localStorage.setItem('hoodmart_v2_sales', JSON.stringify(json.data.sales))
+          reload()
+        }
+      }
+    } catch { /* ignore */ }
+  }
+
+  useEffect(() => { reload(); pullFromServer() }, [])
 
   const stats = useMemo(() => {
     const map = new Map<string, ReturnType<typeof branchStats>>()
