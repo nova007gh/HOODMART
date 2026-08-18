@@ -36,13 +36,38 @@ export async function GET(request: Request) {
 
   for (const t of tables) {
     try {
-      let query = supabase.from(t).select('*')
-      if (storeId) query = query.eq('store_id', storeId)
-      const { data, error } = await query
-      if (error) {
-        errors.push(`${t}: ${error.message}`)
-      } else if (Array.isArray(data)) {
-        result[t] = data
+      // Supabase caps responses at 1000 rows by default. For tables that
+      // can grow large (sales, products, activities), paginate to get all rows.
+      // For sales specifically, we only need recent ones for the dashboard —
+      // fetch the latest 2000 sorted by timestamp descending.
+      if (t === 'sales') {
+        const allRows: any[] = []
+        let offset = 0
+        const pageSize = 1000
+        // Fetch pages until we get less than a full page
+        while (true) {
+          let query = supabase.from(t).select('*').order('timestamp', { ascending: false }).range(offset, offset + pageSize - 1)
+          if (storeId) query = query.eq('store_id', storeId)
+          const { data, error } = await query
+          if (error) { errors.push(`${t}: ${error.message}`); break }
+          if (Array.isArray(data) && data.length > 0) {
+            allRows.push(...data)
+            if (data.length < pageSize) break
+            offset += pageSize
+          } else {
+            break
+          }
+        }
+        result[t] = allRows
+      } else {
+        let query = supabase.from(t).select('*')
+        if (storeId) query = query.eq('store_id', storeId)
+        const { data, error } = await query
+        if (error) {
+          errors.push(`${t}: ${error.message}`)
+        } else if (Array.isArray(data)) {
+          result[t] = data
+        }
       }
     } catch (e: any) {
       errors.push(`${t}: ${e.message}`)
