@@ -6,9 +6,11 @@ import { DashboardLayout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { store, Product, Discount, CartItem, computeTotals, money, Sale, Branch, formatDateTime } from '@/lib/store'
-import { getSession } from '@/lib/auth'
+import { getSession, hasPermission, PERMISSIONS } from '@/lib/auth'
+import { notifications, emailAdmin } from '@/lib/notifications'
 import { Search, ShoppingCart, Plus, Minus, Trash2, CreditCard, Printer, X, Banknote, AlertTriangle, Image as ImageIcon, Calendar, Archive, FolderOpen, Building2, Mail } from 'lucide-react'
 import { POSAIAssistant } from '@/components/pos-ai-assistant'
+import { CashierCard } from '@/components/cashier-card'
 import { Pagination } from '@/components/pagination'
 import toast from 'react-hot-toast'
 
@@ -32,9 +34,14 @@ export default function POSPage() {
   const [customerEmail, setCustomerEmail] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(60)
+  const [canManageProducts, setCanManageProducts] = useState(false)
+  const [salesTick, setSalesTick] = useState(0)
 
   const reload = () => { setProducts(store.getProducts()); setDiscounts(store.getDiscounts()); setBranches(store.getBranches()) }
   useEffect(() => { reload() }, [])
+  useEffect(() => {
+    setCanManageProducts(hasPermission(getSession()?.user ?? null, PERMISSIONS.MANAGE_PRODUCTS))
+  }, [])
   useEffect(() => {
     const active = branches.find((b) => b.status === 'active')
     if (active && !branchId) setBranchId(active.id)
@@ -97,6 +104,17 @@ export default function POSPage() {
     setDiscountId('')
     setReceipt(sale)
     reload()
+    setSalesTick((t) => t + 1)
+
+    // Log the activity so the admin sees it in their notification bell
+    const itemCount = sale.items.reduce((a, i) => a + i.qty, 0)
+    notifications.push(
+      'sale',
+      'Sale completed',
+      `${itemCount} item${itemCount === 1 ? '' : 's'} sold via ${sale.paymentMethod}`,
+      { amount: sale.total, href: `/receipt/${sale.id}` }
+    )
+
     handleEmails(sale)
   }
 
@@ -145,11 +163,38 @@ export default function POSPage() {
         else if (data.error && data.error !== 'Email not configured') toast.error(data.error)
       })
     }
-    send({ type: 'admin', subject: 'New HOODMART Sale Receipt', html: receiptHtml(s) }).then((data) => {
-      if (data.ok) toast.success('Receipt emailed to admin')
-    })
-    send({ type: 'admin', subject: 'Daily Sales Report', html: dailyReportHtml() }).then((data) => {
-      if (data.ok) toast.success('Daily report emailed to admin')
+
+    // Admin activity email — only when the owner has enabled it in Settings
+    let alertsOn = true
+    try { alertsOn = localStorage.getItem('hoodmart_email_alerts') !== 'false' } catch {}
+    if (!alertsOn) return
+
+    const itemCount = s.items.reduce((a, i) => a + i.qty, 0)
+    send({
+      type: 'admin',
+      subject: `New sale by ${s.userName || 'staff'} — ${money(s.total)}`,
+      html: `
+        <div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;color:#18181b;">
+          <div style="background:#18181b;padding:16px 20px;border-radius:8px 8px 0 0;">
+            <h2 style="margin:0;color:#facc15;font-size:18px;">HOODMART · Sale Alert</h2>
+          </div>
+          <div style="border:1px solid #e4e4e7;border-top:0;padding:20px;border-radius:0 0 8px 8px;">
+            <p style="margin:0 0 12px;font-size:14px;">
+              <strong>${s.userName || s.userEmail || 'A staff member'}</strong> just completed a sale.
+            </p>
+            <table style="width:100%;font-size:13px;border-collapse:collapse;">
+              <tr><td style="padding:4px 0;color:#71717a;">Total</td><td style="text-align:right;font-weight:bold;">${money(s.total)}</td></tr>
+              <tr><td style="padding:4px 0;color:#71717a;">Items</td><td style="text-align:right;">${itemCount}</td></tr>
+              <tr><td style="padding:4px 0;color:#71717a;">Payment</td><td style="text-align:right;text-transform:capitalize;">${s.paymentMethod}</td></tr>
+              <tr><td style="padding:4px 0;color:#71717a;">Time</td><td style="text-align:right;">${formatDateTime(s.timestamp)}</td></tr>
+            </table>
+            <hr style="border:0;border-top:1px solid #e4e4e7;margin:16px 0;"/>
+            ${s.items.map((i) => `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;"><span>${i.name} &times;${i.qty}</span><span>${money(i.price * i.qty)}</span></div>`).join('')}
+            <hr style="border:0;border-top:1px solid #e4e4e7;margin:16px 0;"/>
+            ${dailyReportHtml()}
+          </div>
+        </div>
+      `,
     })
   }
 
@@ -208,25 +253,31 @@ export default function POSPage() {
   return (
     <AuthGuard>
       <DashboardLayout>
-        <div className="flex flex-col lg:flex-row gap-4">
-          <div className="flex-1 space-y-4">
+        <div className="space-y-4">
+          {/* Who is selling right now */}
+          <CashierCard refreshKey={salesTick} />
+
+          <div className="flex flex-col lg:flex-row gap-4">
+          <div className="flex-1 min-w-0 space-y-4">
             <Card className="glass-card">
               <CardHeader className="pb-3">
-                <CardTitle className="text-white flex items-center justify-between">
+                <CardTitle className="text-white flex items-center justify-between gap-2">
                   <span>Products</span>
                   <div className="flex items-center gap-2">
                     <Button size="sm" variant="outline" onClick={() => setShowCart(true)} className="lg:hidden border-zinc-700 text-zinc-300 relative">
                       <ShoppingCart className="h-4 w-4" />
                       {cart.length > 0 && <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-yellow-500 text-black text-[10px] flex items-center justify-center font-bold">{cart.length}</span>}
                     </Button>
-                    <Button size="sm" onClick={() => setShowAdd(!showAdd)} className="gold-gradient text-black">
-                      {showAdd ? 'Cancel' : '+ Add'}
-                    </Button>
+                    {canManageProducts && (
+                      <Button size="sm" onClick={() => setShowAdd(!showAdd)} className="gold-gradient text-black">
+                        {showAdd ? 'Cancel' : '+ Add'}
+                      </Button>
+                    )}
                   </div>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {showAdd && (
+                {showAdd && canManageProducts && (
                   <form onSubmit={saveNewProduct} className="grid grid-cols-1 sm:grid-cols-4 gap-2">
                     <input value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} placeholder="Name" required className="bg-zinc-950 border border-zinc-800 text-white rounded p-2 text-sm" />
                     <input value={newProduct.price} onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })} placeholder="Price" type="number" step="0.01" min="0" required className="bg-zinc-950 border border-zinc-800 text-white rounded p-2 text-sm" />
@@ -361,6 +412,7 @@ export default function POSPage() {
                 )}
               </CardContent>
             </Card>
+          </div>
           </div>
         </div>
 

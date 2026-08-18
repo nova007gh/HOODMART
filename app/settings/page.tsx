@@ -5,7 +5,8 @@ import { AuthGuard } from '@/components/auth-guard'
 import { DashboardLayout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Settings, Store, Bell, Lock, Download, Upload, Trash2, KeyRound, Users, Palette, Sun, Moon } from 'lucide-react'
+import Link from 'next/link'
+import { Settings, Store, Bell, Lock, Download, Upload, Trash2, KeyRound, Users, Palette, Sun, Moon, User, Mail } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getSession, updateUser, isAdmin } from '@/lib/auth'
 import { getTheme, setTheme, Theme } from '@/lib/theme'
@@ -44,12 +45,14 @@ export default function SettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [theme, setThemeState] = useState<Theme>('gold')
   const [userIsAdmin, setUserIsAdmin] = useState(false)
+  const [emailAlerts, setEmailAlerts] = useState(true)
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     setStoreName(localStorage.getItem('hoodmart_store_name') || 'HOODMART Store')
     setAddress(localStorage.getItem('hoodmart_store_address') || '')
     setLowStock(localStorage.getItem('hoodmart_low_stock') !== 'false')
+    setEmailAlerts(localStorage.getItem('hoodmart_email_alerts') !== 'false')
     setThemeState(getTheme())
     const session = getSession()
     setUserIsAdmin(isAdmin(session?.user ?? null))
@@ -63,8 +66,12 @@ export default function SettingsPage() {
 
   const save = (e: React.FormEvent) => {
     e.preventDefault()
-    localStorage.setItem('hoodmart_store_name', storeName)
-    localStorage.setItem('hoodmart_store_address', address)
+    // Store identity is admin-only; sales staff can still save their own preferences
+    if (userIsAdmin) {
+      localStorage.setItem('hoodmart_store_name', storeName)
+      localStorage.setItem('hoodmart_store_address', address)
+      localStorage.setItem('hoodmart_email_alerts', emailAlerts ? 'true' : 'false')
+    }
     localStorage.setItem('hoodmart_low_stock', lowStock ? 'true' : 'false')
     toast.success('Settings saved')
   }
@@ -126,8 +133,38 @@ export default function SettingsPage() {
               <CardTitle className="text-white flex items-center gap-2"><Store className="h-5 w-5 text-yellow-500" /> Store Info</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <input value={storeName} onChange={(e) => setStoreName(e.target.value)} placeholder="Store name" />
-              <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Store address" />
+              {userIsAdmin ? (
+                <>
+                  <input value={storeName} onChange={(e) => setStoreName(e.target.value)} placeholder="Store name" />
+                  <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Store address" />
+                </>
+              ) : (
+                <>
+                  <div className="space-y-1">
+                    <p className="text-xs text-zinc-500">Store name</p>
+                    <p className="text-sm font-medium text-white">{storeName}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-zinc-500">Store address</p>
+                    <p className="text-sm text-zinc-300">{address || '—'}</p>
+                  </div>
+                  <p className="flex items-center gap-1.5 pt-1 text-xs text-zinc-500">
+                    <Lock className="h-3 w-3" /> Only an administrator can change store details.
+                  </p>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2"><User className="h-5 w-5 text-yellow-500" /> My Profile</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-zinc-400">Update your display name, phone number and profile picture.</p>
+              <Button asChild type="button" className="gold-gradient text-black font-semibold">
+                <Link href="/profile">Open My Profile</Link>
+              </Button>
             </CardContent>
           </Card>
 
@@ -174,26 +211,53 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2"><Bell className="h-5 w-5 text-yellow-500" /> Notifications</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
-              <label className="flex items-center gap-2 text-zinc-300">
+            <CardContent className="space-y-3">
+              <label className="flex cursor-pointer items-center gap-2 text-zinc-300">
                 <input type="checkbox" checked={lowStock} onChange={(e) => setLowStock(e.target.checked)} /> Low stock alerts
               </label>
+              {userIsAdmin && (
+                <>
+                  <label className="flex cursor-pointer items-start gap-2 text-zinc-300">
+                    <input
+                      type="checkbox"
+                      checked={emailAlerts}
+                      onChange={(e) => setEmailAlerts(e.target.checked)}
+                      className="mt-1"
+                    />
+                    <span>
+                      <span className="flex items-center gap-1.5">
+                        <Mail className="h-3.5 w-3.5 text-yellow-500" /> Email me team activity
+                      </span>
+                      <span className="mt-0.5 block text-xs text-zinc-500">
+                        Receive an email when your sales staff complete a sale, add a customer or
+                        record an expense.
+                      </span>
+                    </span>
+                  </label>
+                  <p className="text-xs text-zinc-500">
+                    In-app activity from your team always appears in the bell icon at the top of the
+                    screen.
+                  </p>
+                </>
+              )}
             </CardContent>
           </Card>
 
-          <Card className="glass-card">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2"><Download className="h-5 w-5 text-yellow-500" /> Backup & Restore</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-sm text-zinc-400">Export all products, sales, users and settings to a JSON file, or restore from a previous backup.</p>
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" onClick={exportData} className="gold-gradient text-black"><Download className="h-4 w-4 mr-2" /> Export Backup</Button>
-                <Button type="button" onClick={() => fileRef.current?.click()} variant="outline" className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"><Upload className="h-4 w-4 mr-2" /> Import Backup</Button>
-                <input ref={fileRef} type="file" accept="application/json" onChange={importData} className="hidden" />
-              </div>
-            </CardContent>
-          </Card>
+          {userIsAdmin && (
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2"><Download className="h-5 w-5 text-yellow-500" /> Backup & Restore</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-zinc-400">Export all products, sales, users and settings to a JSON file, or restore from a previous backup.</p>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" onClick={exportData} className="gold-gradient text-black"><Download className="h-4 w-4 mr-2" /> Export Backup</Button>
+                  <Button type="button" onClick={() => fileRef.current?.click()} variant="outline" className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"><Upload className="h-4 w-4 mr-2" /> Import Backup</Button>
+                  <input ref={fileRef} type="file" accept="application/json" onChange={importData} className="hidden" />
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="glass-card">
             <CardHeader>
@@ -214,14 +278,16 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          <Card className="glass-card md:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2"><Trash2 className="h-5 w-5 text-red-500" /> Danger Zone</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Button type="button" onClick={clearAll} variant="outline" className="border-red-500/40 text-red-400 hover:bg-red-900/20">Clear All Data</Button>
-            </CardContent>
-          </Card>
+          {userIsAdmin && (
+            <Card className="glass-card md:col-span-2 border-red-500/20">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2"><Trash2 className="h-5 w-5 text-red-500" /> Danger Zone</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Button type="button" onClick={clearAll} variant="outline" className="border-red-500/40 text-red-400 hover:bg-red-900/20">Clear All Data</Button>
+              </CardContent>
+            </Card>
+          )}
 
           <div className="md:col-span-2">
             <Button type="submit" className="gold-gradient text-black font-bold">Save Settings</Button>

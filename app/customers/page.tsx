@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { store, Customer, money } from '@/lib/store'
+import { notifications } from '@/lib/notifications'
 import { Users, Plus, Search, Phone, Mail, MapPin, Building2, Trash2, ShoppingBag } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -36,6 +37,9 @@ export default function CustomersPage() {
     e.preventDefault()
     if (!form.name) return toast.error('Name is required')
     store.addCustomer({ ...form, purchases: 0, total: 0 })
+    notifications.push('customer', 'Customer added', `${form.name} was added to the customer list`, {
+      href: '/customers',
+    })
     setForm({ name: '', phone: '', email: '', address: '', companyName: '' })
     setCustomers(store.getCustomers())
     toast.success('Customer added')

@@ -6,12 +6,16 @@ export interface User {
   role: string
   permissions?: string[]
   storeId?: string
+  avatar?: string
+  phone?: string
 }
 
 export interface Session {
   user: User
   loggedInAt: number
   storeId?: string
+  /** The store/business name — distinct from the signed-in person's name. */
+  storeName?: string
 }
 
 type StoredUser = { password: string; name: string; role: string; permissions?: string[], storeId?: string }
@@ -104,6 +108,7 @@ export async function register(email: string, password: string, name: string, ro
         user: { email: normalized, name: displayName, role, permissions, storeId },
         loggedInAt: Date.now(),
         storeId,
+        storeName: displayName,
       }
       try {
         if (typeof window !== 'undefined') localStorage.setItem(SESSION_KEY, JSON.stringify(session))
@@ -221,11 +226,40 @@ export async function login(email: string, password: string): Promise<Session | 
         }
       } catch {}
 
-      const name = storeName || data.user.user_metadata?.store_name || data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'Store Owner'
+      // Fetch this person's own profile (name / avatar / phone) from employees
+      let personName: string | undefined
+      let avatar: string | undefined
+      let phone: string | undefined
+      try {
+        const { data: empRows } = await supabase
+          .from('employees')
+          .select('name, avatar, phone')
+          .eq('email', normalized)
+          .limit(1)
+        const emp = empRows?.[0] as any
+        if (emp) {
+          personName = emp.name || undefined
+          avatar = emp.avatar || undefined
+          phone = emp.phone || undefined
+        }
+      } catch {}
+
+      // Fall back to permissions implied by the role when none are stored
+      if (!permissions.length) permissions = defaultPermissionsForRole(role)
+
+      const name =
+        personName ||
+        data.user.user_metadata?.name ||
+        storeName ||
+        data.user.user_metadata?.store_name ||
+        data.user.email?.split('@')[0] ||
+        'Store Owner'
+
       const session: Session = {
-        user: { email: normalized, name, role, permissions, storeId },
+        user: { email: normalized, name, role, permissions, storeId, avatar, phone },
         loggedInAt: Date.now(),
         storeId,
+        storeName: storeName || data.user.user_metadata?.store_name || 'HOODMART',
       }
       try {
         if (typeof window !== 'undefined') localStorage.setItem(SESSION_KEY, JSON.stringify(session))
@@ -277,6 +311,17 @@ export function isAuthenticated(): boolean {
   return typeof window !== 'undefined' && !!getSession()
 }
 
+/** Merge fields into the current session's user and persist it. */
+export function updateSessionUser(updates: Partial<User>): Session | null {
+  const session = getSession()
+  if (!session) return null
+  session.user = { ...session.user, ...updates }
+  try {
+    if (typeof window !== 'undefined') localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+  } catch {}
+  return session
+}
+
 export function isAdmin(user: User | null): boolean {
   return user?.role === 'admin'
 }
@@ -284,7 +329,82 @@ export function isAdmin(user: User | null): boolean {
 export function hasPermission(user: User | null, permission: string): boolean {
   if (!user) return false
   if (user.role === 'admin') return true
+  if (user.permissions?.includes('*')) return true
   return user.permissions?.includes(permission) ?? false
+}
+
+// ---------------------------------------------------------------------------
+// Permission catalogue
+// ---------------------------------------------------------------------------
+
+export const PERMISSIONS = {
+  PROCESS_SALES: 'process_sales',
+  MANAGE_CUSTOMERS: 'manage_customers',
+  MANAGE_EXPENSES: 'manage_expenses',
+  MANAGE_PRODUCTS: 'manage_products',
+  MANAGE_INVENTORY: 'manage_inventory',
+  MANAGE_EMPLOYEES: 'manage_employees',
+  MANAGE_BRANCHES: 'manage_branches',
+  MANAGE_DISCOUNTS: 'manage_discounts',
+  MANAGE_SUPPLIERS: 'manage_suppliers',
+  MANAGE_GIFT_CARDS: 'manage_gift_cards',
+  MANAGE_QUOTATIONS: 'manage_quotations',
+  PROCESS_RETURNS: 'process_returns',
+  VIEW_SALES_HISTORY: 'view_sales_history',
+  VIEW_REPORTS: 'view_reports',
+  MANAGE_BILLING: 'manage_billing',
+  MANAGE_STORE_SETTINGS: 'manage_store_settings',
+} as const
+
+export const ALL_PERMISSIONS: string[] = Object.values(PERMISSIONS)
+
+/** Permissions a sales person (cashier / salesgirl) gets by default:
+ *  sell products, add customers, record expenses. Nothing else. */
+export const SALES_PERSON_PERMISSIONS: string[] = [
+  PERMISSIONS.PROCESS_SALES,
+  PERMISSIONS.MANAGE_CUSTOMERS,
+  PERMISSIONS.MANAGE_EXPENSES,
+]
+
+export const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
+  admin: ['*'],
+  manager: [
+    PERMISSIONS.PROCESS_SALES,
+    PERMISSIONS.MANAGE_CUSTOMERS,
+    PERMISSIONS.MANAGE_EXPENSES,
+    PERMISSIONS.MANAGE_PRODUCTS,
+    PERMISSIONS.MANAGE_INVENTORY,
+    PERMISSIONS.MANAGE_SUPPLIERS,
+    PERMISSIONS.PROCESS_RETURNS,
+    PERMISSIONS.VIEW_SALES_HISTORY,
+    PERMISSIONS.VIEW_REPORTS,
+  ],
+  cashier: SALES_PERSON_PERMISSIONS,
+  salesgirl: SALES_PERSON_PERMISSIONS,
+  inventory: [PERMISSIONS.MANAGE_INVENTORY, PERMISSIONS.MANAGE_PRODUCTS],
+}
+
+export function defaultPermissionsForRole(role: string): string[] {
+  return ROLE_DEFAULT_PERMISSIONS[role] ?? SALES_PERSON_PERMISSIONS
+}
+
+export const PERMISSION_LABELS: Record<string, string> = {
+  [PERMISSIONS.PROCESS_SALES]: 'Sell products (POS)',
+  [PERMISSIONS.MANAGE_CUSTOMERS]: 'Add customers',
+  [PERMISSIONS.MANAGE_EXPENSES]: 'Record expenses',
+  [PERMISSIONS.MANAGE_PRODUCTS]: 'Manage products',
+  [PERMISSIONS.MANAGE_INVENTORY]: 'Manage inventory',
+  [PERMISSIONS.MANAGE_EMPLOYEES]: 'Manage employees',
+  [PERMISSIONS.MANAGE_BRANCHES]: 'Manage branches',
+  [PERMISSIONS.MANAGE_DISCOUNTS]: 'Manage discounts',
+  [PERMISSIONS.MANAGE_SUPPLIERS]: 'Manage suppliers',
+  [PERMISSIONS.MANAGE_GIFT_CARDS]: 'Manage gift cards',
+  [PERMISSIONS.MANAGE_QUOTATIONS]: 'Manage quotations',
+  [PERMISSIONS.PROCESS_RETURNS]: 'Process returns',
+  [PERMISSIONS.VIEW_SALES_HISTORY]: 'View sales history',
+  [PERMISSIONS.VIEW_REPORTS]: 'View reports',
+  [PERMISSIONS.MANAGE_BILLING]: 'Manage billing',
+  [PERMISSIONS.MANAGE_STORE_SETTINGS]: 'Change store settings',
 }
 
 export function listUsers(): { email: string; name: string; role: string }[] {

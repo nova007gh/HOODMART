@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { store, Expense, money, formatDate } from '@/lib/store'
+import { notifications } from '@/lib/notifications'
 import { Receipt, Plus, Search, Trash2, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -55,6 +56,12 @@ export default function ExpensesPage() {
       vendor: newExpense.vendor || undefined,
       notes: newExpense.notes || undefined,
     })
+    notifications.push(
+      'expense',
+      'Expense recorded',
+      `${newExpense.description} (${newExpense.category})`,
+      { amount, href: '/expenses' }
+    )
     toast.success('Expense recorded')
     setNewExpense({ description: '', amount: '', category: 'Other', date: new Date().toISOString().slice(0, 10), paymentMethod: 'cash', vendor: '', notes: '' })
     setShowAdd(false)

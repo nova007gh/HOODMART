@@ -23,49 +23,50 @@
     "desktop:linux": "next build && electron-builder --linux"
   },
   "dependencies": {
-    "next": "14.1.4",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "@supabase/supabase-js": "^2.45.4",
-    "@supabase/ssr": "^0.5.1",
-    "@tanstack/react-query": "^5.51.1",
-    "zustand": "^4.5.4",
-    "react-hook-form": "^7.52.1",
+    "@capacitor/cli": "^5.7.5",
+    "@capacitor/core": "^5.7.5",
     "@hookform/resolvers": "^3.6.0",
-    "zod": "^3.23.8",
-    "lucide-react": "^0.400.0",
+    "@supabase/ssr": "^0.5.1",
+    "@supabase/supabase-js": "^2.45.4",
+    "@tanstack/react-query": "^5.51.1",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
-    "tailwind-merge": "^2.4.0",
-    "recharts": "^2.12.7",
     "date-fns": "^3.6.0",
-    "react-hot-toast": "^2.4.1",
-    "@capacitor/core": "^5.7.5",
-    "@capacitor/cli": "^5.7.5",
-    "jspdf": "^2.5.1",
     "html2canvas": "^1.4.1",
-    "qrcode": "^1.5.4"
+    "jspdf": "^2.5.1",
+    "lucide-react": "^0.400.0",
+    "next": "14.1.4",
+    "qrcode": "^1.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-hook-form": "^7.52.1",
+    "react-hot-toast": "^2.4.1",
+    "recharts": "^2.12.7",
+    "tailwind-merge": "^2.4.0",
+    "zod": "^3.23.8",
+    "zustand": "^4.5.4"
   },
   "devDependencies": {
-    "typescript": "^5.5.3",
-    "@types/node": "^20.14.10",
-    "@types/react": "^18.3.3",
-    "@types/react-dom": "^18.3.0",
-    "@types/qrcode": "^1.5.5",
-    "autoprefixer": "^10.4.19",
-    "postcss": "^8.4.39",
-    "tailwindcss": "^3.4.4",
-    "tailwindcss-animate": "^1.0.7",
-    "eslint": "^8.57.0",
-    "eslint-config-next": "14.2.5",
     "@capacitor/android": "^5.7.5",
     "@capacitor/ios": "^5.7.5",
-    "electron": "^31.3.0",
-    "electron-builder": "^24.13.3",
-    "concurrently": "^8.2.2",
     "@radix-ui/react-label": "^2.1.0",
     "@radix-ui/react-slot": "^1.1.0",
-    "@tanstack/react-query-devtools": "^5.51.1"
+    "@tanstack/react-query-devtools": "^5.51.1",
+    "@types/node": "^20.14.10",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.19",
+    "concurrently": "^8.2.2",
+    "electron": "^31.3.0",
+    "electron-builder": "^24.13.3",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "14.2.5",
+    "postcss": "^8.4.39",
+    "puppeteer": "^25.8.0",
+    "tailwindcss": "^3.4.4",
+    "tailwindcss-animate": "^1.0.7",
+    "typescript": "^5.5.3"
   },
   "main": "main.js",
   "build": {
@@ -89,21 +90,43 @@
     },
     "mac": {
       "target": [
-        { "target": "dmg", "arch": ["x64", "arm64"] },
-        { "target": "zip", "arch": ["x64", "arm64"] }
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
       ],
       "category": "public.app-category.business",
       "icon": "build-resources/icon.png"
     },
     "win": {
       "target": [
-        { "target": "nsis", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "icon": "build-resources/icon.png"
     },
     "linux": {
       "target": [
-        { "target": "AppImage", "arch": ["x64"] }
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "category": "Office",
       "icon": "build-resources/icon.png"

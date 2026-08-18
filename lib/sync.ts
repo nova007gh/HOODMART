@@ -14,6 +14,7 @@ const KEYS = {
   GIFT_CARDS: 'hoodmart_v2_gift_cards',
   EXPENSES: 'hoodmart_v2_expenses',
   QUOTATIONS: 'hoodmart_v2_quotations',
+  NOTIFICATIONS: 'hoodmart_v2_notifications',
 }
 
 const SYNC_KEY = 'hoodmart_pending_sync'
@@ -139,6 +140,7 @@ const TABLES = [
   { table: 'gift_cards', key: KEYS.GIFT_CARDS },
   { table: 'expenses', key: KEYS.EXPENSES },
   { table: 'quotations', key: KEYS.QUOTATIONS },
+  { table: 'notifications', key: KEYS.NOTIFICATIONS },
 ]
 
 export async function pullRemote(): Promise<void> {

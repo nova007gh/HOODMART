@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
-import { hasPermission } from '@/lib/auth'
+import { hasPermission, isAdmin, PERMISSIONS } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
 import { SubscriptionGuard, SubscriptionBanner } from '@/components/subscription-guard'
+import { NotificationBell } from '@/components/notification-bell'
 import {
   Store,
   ShoppingCart,
@@ -34,24 +35,24 @@ import {
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home, perm: null },
-  { name: 'Point of Sale', href: '/pos', icon: ShoppingCart, perm: 'process_sales' },
-  { name: 'Products', href: '/products', icon: Package, perm: 'manage_products' },
-  { name: 'Inventory', href: '/inventory', icon: Database, perm: 'manage_inventory' },
-  { name: 'Activities', href: '/activities', icon: Activity, perm: 'manage_inventory' },
-  { name: 'Customers', href: '/customers', icon: Users, perm: null },
-  { name: 'Employees', href: '/employees', icon: Briefcase, perm: 'manage_employees' },
-  { name: 'Suppliers', href: '/suppliers', icon: Truck, perm: 'manage_products' },
-  { name: 'Branches', href: '/branches', icon: Store, perm: 'manage_branches' },
-  { name: 'Sales', href: '/sales', icon: CreditCard, perm: null },
-  { name: 'Returns', href: '/returns', icon: Undo2, perm: 'process_sales' },
-  { name: 'Quotations', href: '/quotations', icon: FileText, perm: null },
-  { name: 'Gift Cards', href: '/gift-cards', icon: Gift, perm: null },
-  { name: 'Expenses', href: '/expenses', icon: Receipt, perm: null },
-  { name: 'Discounts', href: '/discounts', icon: Tag, perm: 'manage_discounts' },
-  { name: 'Labels', href: '/labels', icon: TagIcon, perm: 'manage_products' },
-  { name: 'Reports', href: '/reports', icon: BarChart3, perm: 'view_reports' },
+  { name: 'Point of Sale', href: '/pos', icon: ShoppingCart, perm: PERMISSIONS.PROCESS_SALES },
+  { name: 'Products', href: '/products', icon: Package, perm: PERMISSIONS.MANAGE_PRODUCTS },
+  { name: 'Inventory', href: '/inventory', icon: Database, perm: PERMISSIONS.MANAGE_INVENTORY },
+  { name: 'Activities', href: '/activities', icon: Activity, perm: PERMISSIONS.MANAGE_INVENTORY },
+  { name: 'Customers', href: '/customers', icon: Users, perm: PERMISSIONS.MANAGE_CUSTOMERS },
+  { name: 'Employees', href: '/employees', icon: Briefcase, perm: PERMISSIONS.MANAGE_EMPLOYEES },
+  { name: 'Suppliers', href: '/suppliers', icon: Truck, perm: PERMISSIONS.MANAGE_SUPPLIERS },
+  { name: 'Branches', href: '/branches', icon: Store, perm: PERMISSIONS.MANAGE_BRANCHES },
+  { name: 'Sales', href: '/sales', icon: CreditCard, perm: PERMISSIONS.VIEW_SALES_HISTORY },
+  { name: 'Returns', href: '/returns', icon: Undo2, perm: PERMISSIONS.PROCESS_RETURNS },
+  { name: 'Quotations', href: '/quotations', icon: FileText, perm: PERMISSIONS.MANAGE_QUOTATIONS },
+  { name: 'Gift Cards', href: '/gift-cards', icon: Gift, perm: PERMISSIONS.MANAGE_GIFT_CARDS },
+  { name: 'Expenses', href: '/expenses', icon: Receipt, perm: PERMISSIONS.MANAGE_EXPENSES },
+  { name: 'Discounts', href: '/discounts', icon: Tag, perm: PERMISSIONS.MANAGE_DISCOUNTS },
+  { name: 'Labels', href: '/labels', icon: TagIcon, perm: PERMISSIONS.MANAGE_PRODUCTS },
+  { name: 'Reports', href: '/reports', icon: BarChart3, perm: PERMISSIONS.VIEW_REPORTS },
   { name: 'Intelligence', href: '/dashboard/assistant', icon: Brain, perm: null },
-  { name: 'Billing', href: '/billing', icon: CreditCard, perm: null },
+  { name: 'Billing', href: '/billing', icon: CreditCard, perm: PERMISSIONS.MANAGE_BILLING },
   { name: 'Settings', href: '/settings', icon: Settings, perm: null },
 ]
 
@@ -63,7 +64,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [storeName, setStoreName] = useState('HOODMART')
 
   useEffect(() => {
-    const name = session?.user?.name
+    const name = session?.storeName
     if (name) {
       setStoreName(name)
       try { localStorage.setItem('hoodmart_store_name', name) } catch {}
@@ -132,15 +133,27 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="border-t border-zinc-800 p-4 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-zinc-700 flex items-center justify-center">
-              <UserCheck className="h-4 w-4 text-zinc-300" />
-            </div>
+          <Link
+            href="/profile"
+            onClick={() => setSidebarOpen(false)}
+            className="flex items-center gap-3 rounded-lg p-2 -m-2 transition-colors hover:bg-zinc-800/70"
+          >
+            {session?.user.avatar ? (
+              <img
+                src={session.user.avatar}
+                alt={session.user.name}
+                className="h-9 w-9 shrink-0 rounded-full object-cover ring-2 ring-yellow-500/40"
+              />
+            ) : (
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-700 ring-2 ring-zinc-600">
+                <UserCheck className="h-4 w-4 text-zinc-300" />
+              </div>
+            )}
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{session?.user.name || 'Guest'}</p>
-              <p className="text-xs text-zinc-400 truncate">{session?.user.role || 'Unknown'}</p>
+              <p className="truncate text-sm font-medium text-white">{session?.user.name || 'Guest'}</p>
+              <p className="truncate text-xs capitalize text-zinc-400">{session?.user.role || 'Unknown'}</p>
             </div>
-          </div>
+          </Link>
           <button
             onClick={handleLogout}
             className="mt-3 w-full flex items-center gap-2 px-2 py-1 text-xs text-zinc-400 hover:text-white transition-colors"
@@ -162,12 +175,17 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             <Menu className="h-6 w-6" />
           </button>
           <div className="flex-1" />
-          <Button asChild className="gold-gradient text-black">
-            <Link href="/pos">
-              <ShoppingCart className="h-4 w-4 mr-2" />
-              New Sale
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2 sm:gap-3">
+            {isAdmin(session?.user ?? null) && <NotificationBell />}
+            {hasPermission(session?.user ?? null, PERMISSIONS.PROCESS_SALES) && (
+              <Button asChild className="gold-gradient text-black">
+                <Link href="/pos">
+                  <ShoppingCart className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">New Sale</span>
+                </Link>
+              </Button>
+            )}
+          </div>
         </header>
         <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden">
           <SubscriptionGuard>{children}</SubscriptionGuard>

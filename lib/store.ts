@@ -103,6 +103,8 @@ export interface Employee {
   email?: string
   role?: string
   permissions?: string[]
+  /** Square JPEG data URL used as the profile picture */
+  avatar?: string
   deleted?: boolean
 }
 

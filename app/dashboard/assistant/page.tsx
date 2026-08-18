@@ -31,17 +31,21 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-const SUGGESTED_QUESTIONS = [
-  'What are today\'s sales?',
-  'Show this month\'s profit',
-  'Which products are selling the most?',
-  'Which products should I restock?',
-  'Which products should be discounted?',
-  'Who are my top customers?',
-  'Who qualifies for a gift card?',
-  'Which store is performing best?',
-  'Give me today\'s business summary',
-  'What should I focus on today?',
+/** Each suggestion declares the AI permission required to see it, so a sales
+ *  person only ever gets sales-related prompts. */
+const SUGGESTED_QUESTIONS: Array<{ q: string; perm: AIPermission }> = [
+  { q: "What are today's sales?", perm: 'ai.view_sales' },
+  { q: 'How many items did I sell today?', perm: 'ai.view_sales' },
+  { q: 'What was my last sale?', perm: 'ai.view_sales' },
+  { q: "Show this month's profit", perm: 'ai.view_profit' },
+  { q: 'Which products are selling the most?', perm: 'ai.view_products' },
+  { q: 'Which products should I restock?', perm: 'ai.view_inventory' },
+  { q: 'Which products should be discounted?', perm: 'ai.view_products' },
+  { q: 'Who are my top customers?', perm: 'ai.view_customers' },
+  { q: 'Who qualifies for a gift card?', perm: 'ai.view_customers' },
+  { q: 'Which store is performing best?', perm: 'ai.view_staff' },
+  { q: "Give me today's business summary", perm: 'ai.view_profit' },
+  { q: 'What should I focus on today?', perm: 'ai.view_profit' },
 ]
 
 interface ChatMessage {
@@ -86,6 +90,10 @@ export default function AssistantPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  // Only show prompts this role is actually allowed to ask about
+  const visibleSuggestions = SUGGESTED_QUESTIONS.filter((s) => permissions.includes(s.perm))
+  const isSalesOnly = permissions.length > 0 && !permissions.includes('ai.view_profit')
 
   const loadMessages = (convId: string) => {
     const msgs = conversationStore.getMessages(convId)
@@ -318,10 +326,12 @@ export default function AssistantPage() {
                     </div>
                     <h2 className="text-lg sm:text-xl font-bold text-white mb-2">Ask HOODMART Intelligence</h2>
                     <p className="text-sm text-zinc-400 mb-4 sm:mb-6 max-w-md">
-                      Get instant answers about your sales, products, inventory, customers, and business performance.
+                      {isSalesOnly
+                        ? 'Ask about your own sales activity — totals, items sold, and recent transactions.'
+                        : 'Get instant answers about your sales, products, inventory, customers, and business performance.'}
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-2xl w-full">
-                      {SUGGESTED_QUESTIONS.map((q) => (
+                      {visibleSuggestions.map(({ q }) => (
                         <button
                           key={q}
                           onClick={() => handleSend(q)}

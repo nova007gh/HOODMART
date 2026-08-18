@@ -8,20 +8,21 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { store, Employee } from '@/lib/store'
-import { createUser, updateUser, deleteUser, getSession, isAdmin } from '@/lib/auth'
+import {
+  createUser,
+  updateUser,
+  deleteUser,
+  getSession,
+  isAdmin,
+  ALL_PERMISSIONS,
+  PERMISSION_LABELS,
+  defaultPermissionsForRole,
+} from '@/lib/auth'
 import { Users, Search, User, Mail, Phone, Shield, Pencil, Trash2, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const ROLES = ['salesgirl', 'cashier', 'inventory', 'manager', 'admin']
-const PERMISSIONS = [
-  'manage_employees',
-  'manage_products',
-  'manage_inventory',
-  'process_sales',
-  'view_reports',
-  'manage_discounts',
-  'manage_branches',
-]
+const PERMISSIONS = ALL_PERMISSIONS
 
 type FormState = {
   name: string
@@ -40,7 +41,7 @@ const emptyForm: FormState = {
   phone: '',
   password: '',
   role: 'cashier',
-  permissions: [],
+  permissions: defaultPermissionsForRole('cashier'),
 }
 
 export default function EmployeesPage() {
@@ -233,24 +234,41 @@ export default function EmployeesPage() {
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs text-zinc-400 font-medium">Role</label>
-                  <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="h-10 rounded-md bg-zinc-950 border border-zinc-800 text-white px-3 focus:outline-none focus:ring-1 focus:ring-yellow-500">
+                  <select
+                    value={form.role}
+                    onChange={(e) => {
+                      const role = e.target.value
+                      // Applying a role pre-selects the permissions that role should have
+                      setForm((f) => ({ ...f, role, permissions: defaultPermissionsForRole(role).filter((p) => p !== '*') }))
+                    }}
+                    className="h-10 rounded-md bg-zinc-950 border border-zinc-800 text-white px-3 focus:outline-none focus:ring-1 focus:ring-yellow-500"
+                  >
                     {ROLES.map((r) => <option key={r} value={r} className="capitalize">{r}</option>)}
                   </select>
                 </div>
-                <div className="sm:col-span-2 lg:col-span-3 flex flex-wrap gap-2">
-                  {PERMISSIONS.map((perm) => {
-                    const active = form.permissions.includes(perm)
-                    return (
-                      <button
-                        key={perm}
-                        type="button"
-                        onClick={() => togglePermission(perm)}
-                        className={`text-xs px-3 py-1.5 rounded-full border transition ${active ? 'border-yellow-500 bg-yellow-500/10 text-yellow-400' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'}`}
-                      >
-                        {perm.replace(/_/g, ' ')}
-                      </button>
-                    )
-                  })}
+                <div className="sm:col-span-2 lg:col-span-3 space-y-2">
+                  <p className="text-xs font-medium text-zinc-400">
+                    What this person can do
+                    {form.role === 'admin' && (
+                      <span className="ml-2 text-yellow-500">Administrators always have full access.</span>
+                    )}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {PERMISSIONS.map((perm) => {
+                      const active = form.role === 'admin' || form.permissions.includes(perm)
+                      return (
+                        <button
+                          key={perm}
+                          type="button"
+                          disabled={form.role === 'admin'}
+                          onClick={() => togglePermission(perm)}
+                          className={`text-xs px-3 py-1.5 rounded-full border transition disabled:cursor-not-allowed disabled:opacity-60 ${active ? 'border-yellow-500 bg-yellow-500/10 text-yellow-400' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'}`}
+                        >
+                          {PERMISSION_LABELS[perm] || perm.replace(/_/g, ' ')}
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
                 <div className="sm:col-span-2 lg:col-span-3">
                   <Button type="submit" className="gold-gradient text-black w-full sm:w-auto">{editId ? 'Update Employee' : 'Create Employee'}</Button>
@@ -295,7 +313,7 @@ export default function EmployeesPage() {
                     {emp.permissions && emp.permissions.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-1">
                         {emp.permissions.map((p) => (
-                          <span key={p} className="text-[10px] px-2 py-0.5 rounded-full border border-zinc-700 text-zinc-400">{p.replace(/_/g, ' ')}</span>
+                          <span key={p} className="text-[10px] px-2 py-0.5 rounded-full border border-zinc-700 text-zinc-400">{p === '*' ? 'full access' : (PERMISSION_LABELS[p] || p.replace(/_/g, ' '))}</span>
                         ))}
                       </div>
                     )}
