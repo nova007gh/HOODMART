@@ -108,7 +108,7 @@ export default function SalesPage() {
   const [dateFilter, setDateFilter] = useState<DateFilter>('all')
   const [stats, setStats] = useState({ count: 0, revenue: 0, avg: 0 })
 
-  useEffect(() => {
+  const loadSales = () => {
     const s = store.getSales()
     // Sort by timestamp descending (newest first). Fall back to id for ties.
     const sorted = [...s].sort((a, b) => {
@@ -122,6 +122,28 @@ export default function SalesPage() {
     setSales(sorted)
     const revenue = s.reduce((sum, x) => sum + x.total, 0)
     setStats({ count: s.length, revenue, avg: s.length ? revenue / s.length : 0 })
+  }
+
+  // Pull from server-side sync API (bypasses RLS) so the admin sees
+  // sales from all cashier terminals, not just this device.
+  const pullFromServer = async () => {
+    try {
+      const res = await fetch('/api/sync?table=sales')
+      if (res.ok) {
+        const json = await res.json()
+        if (json.data?.sales && Array.isArray(json.data.sales)) {
+          localStorage.setItem('hoodmart_v2_sales', JSON.stringify(json.data.sales))
+          loadSales()
+        }
+      }
+    } catch { /* ignore */ }
+  }
+
+  useEffect(() => {
+    loadSales()
+    pullFromServer()
+    const interval = setInterval(() => { loadSales(); pullFromServer() }, 15000)
+    return () => clearInterval(interval)
   }, [])
 
   const filtered = useMemo(() => {

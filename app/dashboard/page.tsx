@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button'
 import { store, Product, Sale, money, formatDate } from '@/lib/store'
 import { useAuth } from '@/hooks/useAuth'
 import { hasPermission } from '@/lib/auth'
-import * as sync from '@/lib/sync'
 import {
   ShoppingCart, Package, TrendingUp, DollarSign, BarChart3,
   AlertTriangle, Calendar, ArrowUpRight, ArrowDownRight,
@@ -115,19 +114,52 @@ export default function DashboardPage() {
   const { session } = useAuth()
   const user = session?.user ?? null
 
+  const [lastSynced, setLastSynced] = useState<string>('')
+  const [syncing, setSyncing] = useState(false)
+
   const reload = () => { setSales(store.getSales()); setProducts(store.getProducts()) }
+
+  // Pull from the server-side sync API (bypasses RLS) and write to localStorage,
+  // then reload. This is the key fix: the browser's anon key can't read from
+  // Supabase because RLS blocks it, so we use a server-side endpoint with the
+  // service role key instead.
+  const pullAndReload = async () => {
+    setSyncing(true)
+    try {
+      const res = await fetch('/api/sync?table=sales')
+      if (res.ok) {
+        const json = await res.json()
+        if (json.data?.sales && Array.isArray(json.data.sales)) {
+          // Write the fresh sales to localStorage so store.getSales() picks them up
+          localStorage.setItem('hoodmart_v2_sales', JSON.stringify(json.data.sales))
+        }
+      }
+      // Also pull products so stock levels are fresh
+      const res2 = await fetch('/api/sync?table=products')
+      if (res2.ok) {
+        const json2 = await res2.json()
+        if (json2.data?.products && Array.isArray(json2.data.products)) {
+          localStorage.setItem('hoodmart_v2_products', JSON.stringify(json2.data.products))
+        }
+      }
+      reload()
+      setLastSynced(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
+    } catch {
+      /* ignore network errors */
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   useEffect(() => {
     reload()
-    // Refresh from local storage every 10s so new sales made by cashiers
-    // on this device show up on the admin dashboard without a page reload.
-    const interval = setInterval(reload, 10000)
-    // Pull from Supabase every 30s so sales from other cashier terminals /
-    // devices appear on the admin dashboard in near-real-time.
-    const remoteInterval = setInterval(async () => {
-      await sync.pullRemote().catch(() => {})
-      reload()
-    }, 30000)
+    // Pull from server immediately on mount so the admin sees the latest
+    // sales from all cashier terminals right away.
+    pullAndReload()
+    // Refresh from local storage every 5s for instant updates on same-device sales.
+    const interval = setInterval(reload, 5000)
+    // Pull from server every 15s so sales from other devices appear quickly.
+    const remoteInterval = setInterval(pullAndReload, 15000)
     // Also listen for cross-tab storage changes (sales made on other tabs)
     const onStorage = () => reload()
     window.addEventListener('storage', onStorage)
@@ -335,9 +367,17 @@ export default function DashboardPage() {
                     <p className="text-xs text-zinc-500">{new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
                   </div>
                 </div>
-                <button onClick={reload} className="text-xs text-zinc-400 hover:text-yellow-400 transition-colors flex items-center gap-1">
-                  <Activity className="h-3 w-3" /> Refresh
+                <button
+                  onClick={pullAndReload}
+                  disabled={syncing}
+                  className="text-xs text-zinc-400 hover:text-yellow-400 transition-colors flex items-center gap-1 disabled:opacity-50"
+                >
+                  <Activity className={`h-3 w-3 ${syncing ? 'animate-spin' : ''}`} />
+                  {syncing ? 'Syncing...' : 'Refresh'}
                 </button>
+                {lastSynced && (
+                  <span className="text-xs text-zinc-600 ml-2">Last synced: {lastSynced}</span>
+                )}
               </div>
 
               {/* Summary stats */}
