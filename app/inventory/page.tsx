@@ -35,10 +35,18 @@ export default function InventoryPage() {
   const [editing, setEditing] = useState<Product | null>(null)
   const [adjust, setAdjust] = useState<{ id: string; amount: string } | null>(null)
   const [page, setPage] = useState(1)
+  const [loading, setLoading] = useState(true)
   const PAGE_SIZE = 25
 
-  const reload = () => setProducts(store.getProducts())
-  useEffect(() => { reload(); pullTable('products').then(reload) }, [])
+  const reload = () => setProducts([...store.getProducts()])
+  useEffect(() => {
+    reload()
+    setLoading(true)
+    pullTable('products').then(() => {
+      reload()
+      setLoading(false)
+    }).catch(() => setLoading(false))
+  }, [])
 
   const filtered = useMemo(() => {
     const term = search.toLowerCase()
@@ -134,6 +142,12 @@ export default function InventoryPage() {
         </Card>
 
         <Card className="glass-card overflow-hidden">
+          {loading && (
+            <div className="px-4 py-2 bg-yellow-500/10 border-b border-yellow-500/20 text-xs text-yellow-400 flex items-center gap-2">
+              <div className="h-3 w-3 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+              Syncing latest inventory from server...
+            </div>
+          )}
           <CardContent className="p-0 overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-zinc-900/80 text-zinc-400">

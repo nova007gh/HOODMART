@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hoodmart-v2.1.0';
+const CACHE_NAME = 'hoodmart-v2.2.0';
 const urlsToCache = [
   '/',
   '/login',
@@ -30,10 +30,34 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
   const url = new URL(event.request.url);
+  // Never cache API calls or Next.js internals
   if (url.pathname.startsWith('/_next/') || url.pathname.startsWith('/api/')) {
     return;
   }
 
+  // Network-first for navigation (page) requests — always get latest version
+  if (event.request.mode === 'navigate' || event.request.destination === 'document') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200 && response.type === 'basic') {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          return caches.match(event.request).then((resp) => {
+            return resp || caches.match('/login');
+          });
+        })
+    );
+    return;
+  }
+
+  // Cache-first for static assets (images, etc.)
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
@@ -51,11 +75,6 @@ self.addEventListener('fetch', (event) => {
             });
             return response;
           })
-          .catch(() => {
-            if (event.request.destination === 'document') {
-              return caches.match('/login');
-            }
-          });
       })
   );
 });
