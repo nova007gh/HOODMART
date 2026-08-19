@@ -6,8 +6,8 @@ import { DashboardLayout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { store, Product, money } from '@/lib/store'
-import { ensureFreshData } from '@/lib/fresh-data'
-import { Package, Search, Plus, Minus, AlertTriangle, Calendar, Image as ImageIcon, Trash2, Archive, TrendingUp } from 'lucide-react'
+import { pullTable } from '@/lib/fresh-data'
+import { Package, Search, Plus, Minus, AlertTriangle, Calendar, Image as ImageIcon, Trash2, Archive, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
 
@@ -34,9 +34,11 @@ export default function InventoryPage() {
   const [search, setSearch] = useState('')
   const [editing, setEditing] = useState<Product | null>(null)
   const [adjust, setAdjust] = useState<{ id: string; amount: string } | null>(null)
+  const [page, setPage] = useState(1)
+  const PAGE_SIZE = 25
 
   const reload = () => setProducts(store.getProducts())
-  useEffect(() => { reload(); ensureFreshData().then(reload) }, [])
+  useEffect(() => { reload(); pullTable('products').then(reload) }, [])
 
   const filtered = useMemo(() => {
     const term = search.toLowerCase()
@@ -47,6 +49,12 @@ export default function InventoryPage() {
       String(p.supplier || '').toLowerCase().includes(term)
     )
   }, [products, search])
+
+  // Pagination
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+  const safePage = Math.min(page, Math.max(1, totalPages))
+  const pageItems = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+  useEffect(() => { setPage(1) }, [search])
 
   const lowStock = products.filter((p) => (p.stock ?? 0) < (p.minStock ?? 0))
   const expiring = products.filter((p) => { const d = daysUntil(p.expiryDate); return d !== Infinity && d >= 0 && d <= 7 })
@@ -141,7 +149,7 @@ export default function InventoryPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800">
-                {filtered.map((p) => {
+                {pageItems.map((p) => {
                   const status = statusOf(p)
                   const d = daysUntil(p.expiryDate)
                   return (
@@ -174,9 +182,30 @@ export default function InventoryPage() {
                     </tr>
                   )
                 })}
-                {filtered.length === 0 && <tr><td colSpan={8} className="px-4 py-8 text-center text-zinc-500">No inventory items found.</td></tr>}
+                {pageItems.length === 0 && <tr><td colSpan={8} className="px-4 py-8 text-center text-zinc-500">No inventory items found.</td></tr>}
               </tbody>
             </table>
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t border-zinc-800">
+                <button
+                  onClick={() => setPage(Math.max(1, safePage - 1))}
+                  disabled={safePage <= 1}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg bg-zinc-800 text-zinc-300 hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="h-4 w-4" /> Prev
+                </button>
+                <span className="text-sm text-zinc-400">
+                  Page {safePage} of {totalPages} · {filtered.length} items
+                </span>
+                <button
+                  onClick={() => setPage(Math.min(totalPages, safePage + 1))}
+                  disabled={safePage >= totalPages}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg bg-zinc-800 text-zinc-300 hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Next <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
