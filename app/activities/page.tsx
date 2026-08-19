@@ -6,7 +6,7 @@ import { DashboardLayout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { store, Activity, Product } from '@/lib/store'
-import { ensureFreshData } from '@/lib/fresh-data'
+import { pullTable } from '@/lib/fresh-data'
 import { Activity as ActivityIcon, Search, Package, Calendar, User, TrendingUp, TrendingDown } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils'
 
@@ -18,7 +18,8 @@ export default function ActivitiesPage() {
   useEffect(() => {
     const load = () => { setActivities(store.getActivities()); setProducts(store.getProducts()) }
     load()
-    ensureFreshData().then(load)
+    // Use pullTable directly (not rate-limited) to get all 2824 activities
+    Promise.all([pullTable('activities'), pullTable('products')]).then(load)
   }, [])
 
   const productMap = useMemo(() => new Map(products.map((p) => [p.id, p])), [products])
