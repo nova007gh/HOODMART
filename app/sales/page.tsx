@@ -23,7 +23,7 @@ import {
   TrendingUp,
 } from 'lucide-react'
 
-type DateFilter = 'today' | 'week' | 'month' | 'all'
+type DateFilter = 'today' | 'yesterday' | 'week' | 'month' | 'all'
 
 function startOfDay(d = new Date()): Date {
   const x = new Date(d)
@@ -41,6 +41,11 @@ function matchesFilter(sale: Sale, filter: DateFilter): boolean {
     const tomorrowStart = new Date(todayStart)
     tomorrowStart.setDate(tomorrowStart.getDate() + 1)
     return saleDate >= todayStart && saleDate < tomorrowStart
+  }
+  if (filter === 'yesterday') {
+    const yesterdayStart = new Date(todayStart)
+    yesterdayStart.setDate(yesterdayStart.getDate() - 1)
+    return saleDate >= yesterdayStart && saleDate < todayStart
   }
   if (filter === 'week') {
     const weekStart = new Date(todayStart)
@@ -159,6 +164,7 @@ export default function SalesPage() {
 
   const filterButtons: { key: DateFilter; label: string }[] = [
     { key: 'today', label: 'Today' },
+    { key: 'yesterday', label: 'Yesterday' },
     { key: 'week', label: 'This Week' },
     { key: 'month', label: 'This Month' },
     { key: 'all', label: 'All Time' },
@@ -198,7 +204,7 @@ export default function SalesPage() {
                 <CreditCard className="h-5 w-5 text-yellow-500" /> Sales History
                 {dateFilter !== 'all' && (
                   <span className="text-xs font-normal text-zinc-500">
-                    ({filteredStats.count} {dateFilter === 'today' ? 'today' : dateFilter === 'week' ? 'this week' : 'this month'})
+                    ({filteredStats.count} {dateFilter === 'today' ? 'today' : dateFilter === 'yesterday' ? 'yesterday' : dateFilter === 'week' ? 'this week' : 'this month'})
                   </span>
                 )}
               </CardTitle>
