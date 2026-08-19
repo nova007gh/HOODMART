@@ -287,6 +287,30 @@ export const store = {
     sales.unshift(finalized)
     store.setSales(sales)
 
+    // Update customer purchase stats if linked
+    if (finalized.customerId) {
+      const customers = store.getCustomers()
+      const c = customers.find((x) => x.id === finalized.customerId)
+      if (c) {
+        c.purchases = (c.purchases || 0) + 1
+        c.total = (c.total || 0) + finalized.total
+        store.setCustomers(customers)
+        sync.pushLocalChange('customers', c)
+      }
+    } else if (finalized.customer) {
+      // Match by email if no customerId
+      const customers = store.getCustomers()
+      const c = customers.find((x) => x.email?.toLowerCase() === finalized.customer?.toLowerCase())
+      if (c) {
+        c.purchases = (c.purchases || 0) + 1
+        c.total = (c.total || 0) + finalized.total
+        finalized.customerId = c.id
+        store.setCustomers(customers)
+        store.setSales(sales)
+        sync.pushLocalChange('customers', c)
+      }
+    }
+
     sync.pushLocalChange('sales', finalized)
     finalized.items.forEach((item) => {
       const p = products.find((x) => x.id === item.id)
@@ -306,6 +330,15 @@ export const store = {
   deleteCustomer: (id: string) => {
     store.setCustomers(store.getCustomers().filter((c) => c.id !== id))
     sync.pushLocalChange('customers', { id }, 'delete')
+  },
+  updateCustomer: (id: string, c: Partial<Customer>) => {
+    const customers = store.getCustomers()
+    const idx = customers.findIndex((x) => x.id === id)
+    if (idx >= 0) {
+      customers[idx] = { ...customers[idx], ...c }
+      store.setCustomers(customers)
+      sync.pushLocalChange('customers', customers[idx])
+    }
   },
 
   getEmployees: (): Employee[] => { seedIfNeeded(); return get(KEYS.EMPLOYEES, []) },

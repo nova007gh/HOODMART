@@ -102,6 +102,11 @@ export default function POSPage() {
     const emp = session?.user.email
       ? store.getEmployees().find((e) => e.email?.toLowerCase() === session!.user.email.toLowerCase())
       : undefined
+    // Find matching customer by email
+    const matchedCustomer = customerEmail
+      ? store.getCustomers().find((c) => c.email?.toLowerCase() === customerEmail.toLowerCase())
+      : undefined
+
     const sale: Sale = {
       id: Math.random().toString(36).slice(2) + Date.now().toString(36),
       items: cart.map((i) => ({ ...i })),
@@ -113,10 +118,13 @@ export default function POSPage() {
       branchId: branchId || undefined,
       userEmail: session?.user.email,
       userName: emp?.name || session?.user.name,
+      customer: customerEmail || undefined,
+      customerId: matchedCustomer?.id,
     }
     store.addSale(sale)
     setCart([])
     setDiscountId('')
+    setCustomerEmail('')
     reload()
     setSalesTick((t) => t + 1)
 
