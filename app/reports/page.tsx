@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { store, Sale, Product, money, formatDate } from '@/lib/store'
 import { pullTable } from '@/lib/fresh-data'
 import { generateSalesPDF, generateInventoryPDF, downloadPDF, SalesReportData, InventoryReportData } from '@/lib/reports/pdf'
-import { Calendar, FileText, Printer, TrendingUp, Package, DollarSign, BarChart3, Download, ListChecks, Lightbulb, Coins } from 'lucide-react'
+import { Calendar, FileText, Printer, TrendingUp, Package, DollarSign, BarChart3, Download, ListChecks, Lightbulb, Coins, RefreshCw } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils'
 
 export default function ReportsPage() {
@@ -19,14 +19,20 @@ export default function ReportsPage() {
   const [start, setStart] = useState(() => new Date().toISOString().slice(0, 10))
   const [end, setEnd] = useState(() => new Date().toISOString().slice(0, 10))
   const [generating, setGenerating] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
 
-  const loadData = () => { setSales(store.getSales()); setProducts(store.getProducts()) }
+  const loadData = () => { setSales([...store.getSales()]); setProducts([...store.getProducts()]) }
 
   // Pull from the server-side sync API (bypasses RLS) so the reports
   // page sees all sales from all cashier terminals, not just cached data.
   const pullFromServer = async () => {
-    await Promise.all([pullTable('sales'), pullTable('products')])
-    loadData()
+    setRefreshing(true)
+    try {
+      await Promise.all([pullTable('sales'), pullTable('products')])
+      loadData()
+    } finally {
+      setRefreshing(false)
+    }
   }
 
   useEffect(() => {
@@ -203,14 +209,25 @@ export default function ReportsPage() {
               <h1 className="text-2xl font-bold text-white">Reports</h1>
               <p className="text-zinc-400 text-sm">Generate printable business reports with date ranges.</p>
             </div>
-            <Button
-              onClick={handlePrint}
-              disabled={generating}
-              className="gold-gradient text-black"
-            >
-              {generating ? <BarChart3 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
-              {generating ? 'Preparing…' : 'Download PDF'}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={pullFromServer}
+                disabled={refreshing}
+                variant="outline"
+                className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+              >
+                {refreshing ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                {refreshing ? 'Syncing…' : 'Refresh'}
+              </Button>
+              <Button
+                onClick={handlePrint}
+                disabled={generating}
+                className="gold-gradient text-black"
+              >
+                {generating ? <BarChart3 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+                {generating ? 'Preparing…' : 'Download PDF'}
+              </Button>
+            </div>
           </div>
 
           <Card className="glass-card">
