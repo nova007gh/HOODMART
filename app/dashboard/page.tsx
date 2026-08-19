@@ -261,10 +261,22 @@ export default function DashboardPage() {
     let cost = 0
     sales.forEach((s) => s.items.forEach((item) => {
       const product = products.find((p) => p.id === item.id)
-      cost += (product?.cost ?? product?.price ?? item.price) * item.qty
+      const itemCost = (item as any).cost ?? product?.cost ?? 0
+      cost += itemCost * item.qty
     }))
     return totalRevenue - cost
   }, [sales, products, totalRevenue])
+
+  // Today's profit
+  const todayProfit = useMemo(() => {
+    let cost = 0
+    todaySales.forEach((s) => s.items.forEach((item) => {
+      const product = products.find((p) => p.id === item.id)
+      const itemCost = (item as any).cost ?? product?.cost ?? 0
+      cost += itemCost * item.qty
+    }))
+    return todayRevenue - cost
+  }, [todaySales, products, todayRevenue])
 
   // Week-over-week change calculations
   const weekChanges = useMemo(() => {
@@ -367,10 +379,17 @@ export default function DashboardPage() {
               </div>
 
               {/* Summary stats */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
                 <div className="p-3 rounded-lg bg-zinc-900/60 border border-zinc-800">
                   <p className="text-xs text-zinc-500 mb-1">Revenue Today</p>
                   <p className="text-2xl font-bold gold-text">{money(todayRevenue)}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-green-500/5 border border-green-500/20">
+                  <p className="text-xs text-zinc-500 mb-1">Today&apos;s Profit</p>
+                  <p className="text-2xl font-bold text-green-400">{money(todayProfit)}</p>
+                  <p className="text-[10px] text-zinc-600 mt-0.5">
+                    {todayRevenue > 0 ? `${((todayProfit / todayRevenue) * 100).toFixed(1)}% margin` : 'No sales yet'}
+                  </p>
                 </div>
                 <div className="p-3 rounded-lg bg-zinc-900/60 border border-zinc-800">
                   <p className="text-xs text-zinc-500 mb-1">Transactions</p>
