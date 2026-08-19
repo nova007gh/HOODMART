@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { store, Sale, Product, money, formatDate } from '@/lib/store'
 import { pullTable } from '@/lib/fresh-data'
 import { generateSalesPDF, generateInventoryPDF, downloadPDF, SalesReportData, InventoryReportData } from '@/lib/reports/pdf'
-import { Calendar, FileText, Printer, TrendingUp, Package, DollarSign, BarChart3, Download, ListChecks, Lightbulb } from 'lucide-react'
+import { Calendar, FileText, Printer, TrendingUp, Package, DollarSign, BarChart3, Download, ListChecks, Lightbulb, Coins } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils'
 
 export default function ReportsPage() {
@@ -61,7 +61,7 @@ export default function ReportsPage() {
     return sales.filter((s) => s.timestamp.slice(0, 10) >= start && s.timestamp.slice(0, 10) <= end)
   }, [sales, start, end])
 
-  const salesData = useMemo(() => {
+  const { salesData, profit, totalCost, profitMargin } = useMemo(() => {
     const total = filteredSales.reduce((sum, s) => sum + s.total, 0)
     const discounts = filteredSales.reduce((sum, s) => sum + s.discount, 0)
     const refunds = 0
@@ -69,6 +69,11 @@ export default function ReportsPage() {
     const byPayment: Record<string, number> = {}
     const byDay: Record<string, number> = {}
     const productMap = new Map<string, { name: string; qty: number; total: number }>()
+
+    // Calculate profit: revenue - cost of goods sold
+    let costOfGoods = 0
+    const productCostMap = new Map<string, number>()
+    products.forEach((p) => productCostMap.set(p.id, p.cost ?? 0))
 
     filteredSales.forEach((s) => {
       const day = s.timestamp.slice(0, 10)
@@ -80,10 +85,15 @@ export default function ReportsPage() {
         cur.qty += i.qty
         cur.total += i.price * i.qty
         productMap.set(i.id, cur)
+        // Use item's own cost if available, else look up from products table
+        const cost = (i as any).cost ?? productCostMap.get(i.id) ?? 0
+        costOfGoods += cost * i.qty
       })
     })
 
     const topProducts = Array.from(productMap.values()).sort((a, b) => b.qty - a.qty).slice(0, 10)
+    const profitVal = total - costOfGoods
+    const margin = total > 0 ? (profitVal / total) * 100 : 0
 
     const data: SalesReportData = {
       label: rangeType.charAt(0).toUpperCase() + rangeType.slice(1),
@@ -100,8 +110,8 @@ export default function ReportsPage() {
       topProducts,
       transactions: filteredSales,
     }
-    return data
-  }, [filteredSales, rangeType, start, end])
+    return { salesData: data, profit: profitVal, totalCost: costOfGoods, profitMargin: margin }
+  }, [filteredSales, rangeType, start, end, products])
 
   const insights = useMemo(() => {
     const tips: { text: string; tone: 'green' | 'yellow' | 'red' | 'neutral' }[] = []
@@ -124,12 +134,19 @@ export default function ReportsPage() {
       if (paymentMethods.length === 1 && salesData.byPayment['cash']) {
         tips.push({ text: 'Cash dominates payments. Add mobile/card options to reduce queues and increase convenience.', tone: 'yellow' })
       }
+      if (profitMargin > 30) {
+        tips.push({ text: `Healthy profit margin of ${profitMargin.toFixed(1)}%. Your pricing strategy is working well.`, tone: 'green' })
+      } else if (profitMargin > 0 && profitMargin < 15) {
+        tips.push({ text: `Profit margin is ${profitMargin.toFixed(1)}% — consider reviewing supplier costs or adjusting prices.`, tone: 'yellow' })
+      } else if (profit <= 0 && salesData.revenue > 0) {
+        tips.push({ text: 'This period operated at a loss. Review cost of goods and pricing urgently.', tone: 'red' })
+      }
     }
     if (tips.length === 0) {
       tips.push({ text: 'Sales are steady. Keep monitoring top products and customer buying patterns.', tone: 'neutral' })
     }
     return tips
-  }, [salesData])
+  }, [salesData, profit, profitMargin])
 
   const inventoryData = useMemo((): InventoryReportData => {
     const totalStock = products.reduce((sum, p) => sum + (p.stock ?? 0), 0)
@@ -257,8 +274,9 @@ export default function ReportsPage() {
           </Card>
 
           {reportType === 'sales' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               <Card className="card-gold"><CardContent className="p-4"><DollarSign className="h-6 w-6 text-yellow-500 mb-2" /><p className="text-sm text-zinc-400">Revenue</p><p className="text-2xl font-bold gold-text">{money(salesData.revenue)}</p></CardContent></Card>
+              <Card className="card-gold"><CardContent className="p-4"><Coins className="h-6 w-6 text-green-500 mb-2" /><p className="text-sm text-zinc-400">Profit</p><p className="text-2xl font-bold text-green-400">{money(profit)}</p><p className="text-xs text-zinc-500 mt-1">{profitMargin.toFixed(1)}% margin · COGS {money(totalCost)}</p></CardContent></Card>
               <Card className="card-gold"><CardContent className="p-4"><BarChart3 className="h-6 w-6 text-blue-500 mb-2" /><p className="text-sm text-zinc-400">Transactions</p><p className="text-2xl font-bold text-blue-400">{salesData.sales}</p></CardContent></Card>
               <Card className="card-gold"><CardContent className="p-4"><Package className="h-6 w-6 text-green-500 mb-2" /><p className="text-sm text-zinc-400">Items Sold</p><p className="text-2xl font-bold text-green-400">{salesData.itemsSold}</p></CardContent></Card>
               <Card className="card-gold"><CardContent className="p-4"><TrendingUp className="h-6 w-6 text-purple-500 mb-2" /><p className="text-sm text-zinc-400">Avg Sale</p><p className="text-2xl font-bold text-purple-400">{money(salesData.avgOrderValue)}</p></CardContent></Card>
