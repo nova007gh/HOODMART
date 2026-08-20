@@ -6,7 +6,7 @@ import { DashboardLayout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { store, Product, money } from '@/lib/store'
-import { ensureFreshData } from '@/lib/fresh-data'
+import { pullTable } from '@/lib/fresh-data'
 import { optimizeImage, formatBytes } from '@/lib/image'
 import { Search, Package, Plus, X, Camera, Calendar, AlertTriangle, Edit2, Trash2, Save, Image as ImageIcon, Loader2 } from 'lucide-react'
 import { Pagination } from '@/components/pagination'
@@ -77,8 +77,8 @@ export default function ProductsPage() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(12)
 
-  const reload = () => setProducts(store.getProducts())
-  useEffect(() => { reload(); ensureFreshData().then(reload) }, [])
+  const reload = () => setProducts([...store.getProducts()])
+  useEffect(() => { reload(); pullTable('products').then(reload) }, [])
 
   useEffect(() => {
     const expiring = products.filter((p) => { const d = daysUntil(p.expiryDate); return d >= 0 && d <= 3 })

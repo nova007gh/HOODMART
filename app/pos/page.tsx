@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { store, Product, Discount, CartItem, computeTotals, money, Sale, Branch, formatDateTime } from '@/lib/store'
 import { getSession, hasPermission, PERMISSIONS } from '@/lib/auth'
-import { ensureFreshData } from '@/lib/fresh-data'
+import { pullTable } from '@/lib/fresh-data'
 import { notifications, emailAdmin } from '@/lib/notifications'
 import { Search, ShoppingCart, Plus, Minus, Trash2, CreditCard, Printer, X, Banknote, AlertTriangle, Image as ImageIcon, Calendar, Archive, FolderOpen, Building2, Mail, CheckCircle } from 'lucide-react'
 import { POSAIAssistant } from '@/components/pos-ai-assistant'
@@ -38,8 +38,16 @@ export default function POSPage() {
   const [canManageProducts, setCanManageProducts] = useState(false)
   const [salesTick, setSalesTick] = useState(0)
 
-  const reload = () => { setProducts(store.getProducts()); setDiscounts(store.getDiscounts()); setBranches(store.getBranches()) }
-  useEffect(() => { reload(); ensureFreshData().then(reload) }, [])
+  const reload = () => { setProducts([...store.getProducts()]); setDiscounts([...store.getDiscounts()]); setBranches([...store.getBranches()]) }
+  useEffect(() => {
+    reload()
+    Promise.all([pullTable('products'), pullTable('discounts'), pullTable('branches')]).then(reload)
+    // Refresh products every 30s so new items added by admin appear
+    const interval = setInterval(() => {
+      pullTable('products').then(reload)
+    }, 30000)
+    return () => clearInterval(interval)
+  }, [])
   useEffect(() => {
     setCanManageProducts(hasPermission(getSession()?.user ?? null, PERMISSIONS.MANAGE_PRODUCTS))
   }, [])
