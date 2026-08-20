@@ -83,6 +83,32 @@ function parseSpecificDate(text: string): { start: Date; end: Date } | null {
   return null
 }
 
+/**
+ * Check if a question contains any date-related keywords.
+ * Used to determine if a follow-up question needs context from
+ * the previous question.
+ */
+export function hasDateKeyword(question: string): boolean {
+  const lower = question.toLowerCase()
+  return (
+    lower.includes('today') ||
+    lower.includes('yesterday') ||
+    lower.includes('this week') ||
+    lower.includes('last week') ||
+    lower.includes('this month') ||
+    lower.includes('last month') ||
+    lower.includes('this quarter') ||
+    lower.includes('last quarter') ||
+    lower.includes('this year') ||
+    lower.includes('last year') ||
+    lower.includes('past ') ||
+    lower.includes('last 7') ||
+    lower.includes('last 30') ||
+    /(\d{1,2})(?:st|nd|rd|th)?\s+(\w+)/.test(lower) ||
+    new RegExp(`(?:in|during)\\s+(${MONTH_NAMES.join('|')})`).test(lower)
+  )
+}
+
 export function parseDateRange(question: string): DateRange {
   const now = new Date()
   const lower = question.toLowerCase()

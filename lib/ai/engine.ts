@@ -5,6 +5,7 @@ import { conversationStore } from './conversation'
 import { checkRateLimit, recordRequest } from './rate-limit'
 import { canAccessAI } from './permissions'
 import { User } from '@/lib/auth'
+import { parseDateRange, hasDateKeyword } from './date-range'
 
 export interface LocalAIResult {
   answer: string
@@ -12,6 +13,54 @@ export interface LocalAIResult {
   dateRangeLabel: string
   durationMs: number
   error?: string
+}
+
+/**
+ * Resolve a follow-up question by inheriting context from the conversation.
+ * If the user asks "sold by who" after asking about yesterday's sales,
+ * we prepend "yesterday" to the question so the date range is preserved.
+ */
+function resolveWithContext(question: string, conversationId?: string): string {
+  if (!conversationId || typeof window === 'undefined') return question
+
+  // If the question already has a date keyword, no need to inherit
+  if (hasDateKeyword(question)) return question
+
+  // Get recent messages from the conversation
+  const messages = conversationStore.getMessages(conversationId)
+  if (messages.length === 0) return question
+
+  // Find the most recent user message that has a date keyword
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i]
+    if (msg.role === 'user' && hasDateKeyword(msg.content)) {
+      // Extract the date-related phrase from the previous question
+      const prevLower = msg.content.toLowerCase()
+      const dateKeywords = [
+        'today', 'yesterday', 'this week', 'last week', 'this month',
+        'last month', 'this quarter', 'last quarter', 'this year', 'last year',
+      ]
+      for (const kw of dateKeywords) {
+        if (prevLower.includes(kw)) {
+          // Check if the follow-up is a contextual question
+          const lower = question.toLowerCase()
+          const isFollowUp =
+            lower.includes('who') || lower.includes('sold by') ||
+            lower.includes('by who') || lower.includes('which') ||
+            lower.includes('what about') || lower.includes('how about') ||
+            lower.includes('and') || lower.includes('breakdown') ||
+            lower.includes('by staff') || lower.includes('by cashier') ||
+            lower.includes('by payment') || lower.includes('by category') ||
+            lower.length < 20 // short questions are likely follow-ups
+          if (isFollowUp) {
+            return `${kw} ${question}`
+          }
+        }
+      }
+    }
+  }
+
+  return question
 }
 
 export function processQuestion(
@@ -67,6 +116,9 @@ export function processQuestion(
     return result
   }
 
+  // Resolve follow-up questions with conversation context
+  const resolvedQuestion = resolveWithContext(question, conversationId)
+
   const ctx: AIToolContext = {
     user,
     permissions: permissions as AIToolContext['permissions'],
@@ -74,8 +126,8 @@ export function processQuestion(
     currency: 'GHS',
   }
 
-  const { results, rangeLabel } = executeTools(question, ctx)
-  const answer = generateResponse(results, rangeLabel, question)
+  const { results, rangeLabel } = executeTools(resolvedQuestion, ctx)
+  const answer = generateResponse(results, rangeLabel, resolvedQuestion)
 
   recordRequest()
 

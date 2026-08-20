@@ -49,7 +49,7 @@ const TOOLS: AIToolDef[] = [
     name: 'get_sales_summary',
     description: 'Get sales summary for a date range including gross, net, discounts, and transaction count',
     requiredPermission: 'ai.view_sales',
-    keywords: ['sales', 'sold', 'revenue', 'today', 'yesterday', 'month', 'week', 'how much'],
+    keywords: ['sales', 'sold', 'revenue', 'today', 'yesterday', 'month', 'week', 'how much', 'how many', 'total'],
     execute: (ctx, range) => ({
       toolName: 'get_sales_summary',
       permission: 'ai.view_sales',
@@ -186,7 +186,7 @@ const TOOLS: AIToolDef[] = [
     name: 'get_staff_performance',
     description: 'Get staff performance ranked by sales and transactions',
     requiredPermission: 'ai.view_staff',
-    keywords: ['cashier', 'staff', 'who sold', 'who processed', 'employee'],
+    keywords: ['cashier', 'staff', 'who sold', 'who processed', 'employee', 'sold by who', 'by who', 'who made', 'by staff', 'by cashier', 'who sold it', 'who made the sale', 'who made sales', 'sales by', 'who was selling', 'who did'],
     execute: (ctx, range) => ({
       toolName: 'get_staff_performance',
       permission: 'ai.view_staff',
