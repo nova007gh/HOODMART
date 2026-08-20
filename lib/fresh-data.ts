@@ -30,6 +30,35 @@ const TABLE_KEYS: Record<string, string> = {
   quotations: 'hoodmart_v2_quotations',
 }
 
+/**
+ * Merge local-only fields (like avatar) that may not exist in Supabase yet.
+ * When the server returns employees without an avatar column, we preserve
+ * the avatar from localStorage so profile pictures don't disappear.
+ */
+function mergeLocalFields(table: string, serverData: any[]): any[] {
+  if (table !== 'employees' || typeof window === 'undefined') return serverData
+  const key = TABLE_KEYS.employees
+  if (!key) return serverData
+  try {
+    const raw = localStorage.getItem(key)
+    if (!raw) return serverData
+    const localData: any[] = JSON.parse(raw)
+    const avatarMap = new Map<string, string>()
+    for (const e of localData) {
+      if (e.id && e.avatar) avatarMap.set(e.id, e.avatar)
+    }
+    if (avatarMap.size === 0) return serverData
+    return serverData.map((e) => {
+      if (!e.avatar && avatarMap.has(e.id)) {
+        return { ...e, avatar: avatarMap.get(e.id) }
+      }
+      return e
+    })
+  } catch {
+    return serverData
+  }
+}
+
 function buildUrl(table?: string): string {
   const storeId = getStoreId()
   const params = new URLSearchParams()
@@ -56,7 +85,8 @@ export async function ensureFreshData(): Promise<void> {
           for (const [table, key] of Object.entries(TABLE_KEYS)) {
             if (json.data[table] && Array.isArray(json.data[table])) {
               try {
-                localStorage.setItem(key, JSON.stringify(json.data[table]))
+                const merged = mergeLocalFields(table, json.data[table])
+                localStorage.setItem(key, JSON.stringify(merged))
               } catch {
                 /* quota — ignore */
               }
@@ -91,12 +121,13 @@ export async function pullTable(table: string): Promise<any[] | null> {
       const json = await res.json()
       if (json.data?.[table] && Array.isArray(json.data[table])) {
         const key = TABLE_KEYS[table]
+        const merged = mergeLocalFields(table, json.data[table])
         if (key) {
           try {
-            localStorage.setItem(key, JSON.stringify(json.data[table]))
+            localStorage.setItem(key, JSON.stringify(merged))
           } catch { /* quota — ignore */ }
         }
-        return json.data[table]
+        return merged
       }
     }
   } catch { /* ignore */ }

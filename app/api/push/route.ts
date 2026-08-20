@@ -56,7 +56,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, op: 'delete', table, id })
     } else {
       // upsert
-      const { data, error } = await supabase.from(table).upsert(stamped).select('id')
+      let { data, error } = await supabase.from(table).upsert(stamped).select('id')
+      // If the avatar column doesn't exist yet, retry without it
+      if (error && error.message.includes('avatar') && table === 'employees') {
+        const { avatar, ...withoutAvatar } = stamped
+        const retry = await supabase.from(table).upsert(withoutAvatar).select('id')
+        data = retry.data
+        error = retry.error
+      }
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
       return NextResponse.json({ success: true, op: 'upsert', table, id: data?.[0]?.id })
     }

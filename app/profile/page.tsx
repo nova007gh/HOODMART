@@ -6,7 +6,7 @@ import { DashboardLayout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { store } from '@/lib/store'
-import { ensureFreshData } from '@/lib/fresh-data'
+import { pullTable } from '@/lib/fresh-data'
 import { getSession, updateSessionUser } from '@/lib/auth'
 import { optimizeImage, formatBytes } from '@/lib/image'
 import { Camera, Loader2, Mail, Phone, Shield, Trash2, UploadCloud, User as UserIcon } from 'lucide-react'
@@ -40,7 +40,7 @@ export default function ProfilePage() {
       setAvatar(emp?.avatar || user.avatar)
     }
     loadProfile()
-    ensureFreshData().then(loadProfile)
+    pullTable('employees').then(loadProfile)
   }, [])
 
   const pickFile = () => fileRef.current?.click()
