@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { store, Expense, money, formatDate } from '@/lib/store'
-import { ensureFreshData } from '@/lib/fresh-data'
+import { pullTable } from '@/lib/fresh-data'
 import { notifications } from '@/lib/notifications'
 import { Receipt, Plus, Search, Trash2, X } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -22,8 +22,8 @@ export default function ExpensesPage() {
   const [filterCat, setFilterCat] = useState('')
   const [newExpense, setNewExpense] = useState({ description: '', amount: '', category: 'Other', date: new Date().toISOString().slice(0, 10), paymentMethod: 'cash', vendor: '', notes: '' })
 
-  const reload = () => setExpenses(store.getExpenses())
-  useEffect(() => { reload(); ensureFreshData().then(reload) }, [])
+  const reload = () => setExpenses([...store.getExpenses()])
+  useEffect(() => { reload(); pullTable('expenses').then(reload) }, [])
 
   const filtered = expenses.filter((e) => {
     const matchSearch = e.description.toLowerCase().includes(search.toLowerCase()) || (e.vendor || '').toLowerCase().includes(search.toLowerCase())

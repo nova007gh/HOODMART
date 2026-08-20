@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { store, Quotation, Product, CartItem, money, formatDateTime } from '@/lib/store'
-import { ensureFreshData } from '@/lib/fresh-data'
+import { pullTable } from '@/lib/fresh-data'
 import { FileText, Plus, Search, Trash2, X, CheckCircle, ShoppingCart } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -29,10 +29,10 @@ export default function QuotationsPage() {
   const [productSearch, setProductSearch] = useState('')
 
   const reload = () => {
-    setQuotations(store.getQuotations())
-    setProducts(store.getProducts())
+    setQuotations([...store.getQuotations()])
+    setProducts([...store.getProducts()])
   }
-  useEffect(() => { reload(); ensureFreshData().then(reload) }, [])
+  useEffect(() => { reload(); Promise.all([pullTable('quotations'), pullTable('products'), pullTable('customers')]).then(reload) }, [])
 
   const filtered = quotations.filter((q) =>
     q.quoteNumber.toLowerCase().includes(search.toLowerCase()) ||

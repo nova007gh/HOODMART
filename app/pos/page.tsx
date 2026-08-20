@@ -71,6 +71,15 @@ export default function POSPage() {
   useEffect(() => { setPage(1) }, [search])
 
   const addToCart = (product: Product) => {
+    // Get current stock from the live products list
+    const liveProduct = products.find((p) => p.id === product.id)
+    const currentStock = liveProduct?.stock ?? 0
+    // Check how many are already in cart
+    const inCart = cart.find((i) => i.id === product.id)?.qty ?? 0
+    if (currentStock > 0 && inCart >= currentStock) {
+      toast.error(`Only ${currentStock} ${product.unit || 'unit'}(s) of ${product.name} in stock`)
+      return
+    }
     setCart((prev) => {
       const existing = prev.find((i) => i.id === product.id)
       if (existing) return prev.map((i) => (i.id === product.id ? { ...i, qty: i.qty + 1 } : i))
@@ -346,16 +355,38 @@ export default function POSPage() {
                     const expiryDays = daysUntil(p.expiryDate)
                     const expired = expiryDays !== Infinity && expiryDays < 0
                     const expiringSoon = expiryDays >= 0 && expiryDays <= 3
+                    const stock = p.stock ?? 0
+                    const outOfStock = stock <= 0
+                    const lowStock = stock > 0 && stock <= (p.minStock ?? 1)
                     return (
-                      <button key={p.id} onClick={() => addToCart(p)} className={`text-left rounded-lg bg-zinc-900 border overflow-hidden hover:shadow-lg transition-all ${expired ? 'border-red-500/60' : expiringSoon ? 'border-yellow-500/60' : 'border-zinc-700 hover:border-yellow-500/60 hover:shadow-yellow-500/10'}`}>
-                        <div className="h-16 sm:h-20 bg-zinc-950 flex items-center justify-center border-b border-zinc-800">
+                      <button
+                        key={p.id}
+                        onClick={() => !outOfStock && addToCart(p)}
+                        disabled={outOfStock}
+                        className={`text-left rounded-lg bg-zinc-900 border overflow-hidden transition-all relative ${
+                          outOfStock ? 'border-zinc-800 opacity-50 cursor-not-allowed' :
+                          expired ? 'border-red-500/60 hover:shadow-lg' :
+                          expiringSoon ? 'border-yellow-500/60 hover:shadow-lg' :
+                          'border-zinc-700 hover:border-yellow-500/60 hover:shadow-lg hover:shadow-yellow-500/10'
+                        }`}
+                      >
+                        <div className="h-16 sm:h-20 bg-zinc-950 flex items-center justify-center border-b border-zinc-800 relative">
                           {p.image ? <img src={p.image} alt={p.name} className="h-full w-full object-cover" /> : <ImageIcon className="h-6 w-6 sm:h-8 sm:w-8 text-zinc-600" />}
+                          {/* Stock badge */}
+                          <span className={`absolute top-1 right-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                            outOfStock ? 'bg-red-500/90 text-white' :
+                            lowStock ? 'bg-yellow-500/90 text-black' :
+                            'bg-green-500/90 text-white'
+                          }`}>
+                            {outOfStock ? 'OUT' : stock}
+                          </span>
                         </div>
                         <div className="p-2 sm:p-3">
                           <p className="font-semibold text-zinc-100 text-xs sm:text-sm truncate">{p.name}</p>
                           <p className="text-xs sm:text-sm text-zinc-400">{money(p.price)}</p>
-                          {expired && <p className="text-xs text-red-400 mt-1 flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Expired</p>}
-                          {expiringSoon && !expired && <p className="text-xs text-yellow-400 mt-1 flex items-center gap-1"><Calendar className="h-3 w-3" /> {expiryDays}d left</p>}
+                          {outOfStock && <p className="text-xs text-red-400 mt-1">Out of stock</p>}
+                          {expired && !outOfStock && <p className="text-xs text-red-400 mt-1 flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Expired</p>}
+                          {expiringSoon && !expired && !outOfStock && <p className="text-xs text-yellow-400 mt-1 flex items-center gap-1"><Calendar className="h-3 w-3" /> {expiryDays}d left</p>}
                         </div>
                       </button>
                     )
@@ -393,11 +424,14 @@ export default function POSPage() {
               <CardContent className="space-y-4">
                 {cart.length === 0 ? <p className="text-zinc-500 text-sm">Cart is empty</p> : (
                   <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-                    {cart.map((item) => (
+                    {cart.map((item) => {
+                      const liveProduct = products.find((p) => p.id === item.id)
+                      const stock = liveProduct?.stock ?? 0
+                      return (
                       <div key={item.id} className="flex items-center justify-between p-2 rounded bg-zinc-900/60 border border-zinc-800">
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm truncate">{item.name}</p>
-                          <p className="text-xs text-zinc-400">{money(item.price)}</p>
+                          <p className="text-xs text-zinc-400">{money(item.price)} · <span className={stock <= 0 ? 'text-red-400' : stock <= (item.minStock ?? 1) ? 'text-yellow-400' : 'text-green-400'}>{stock} in stock</span></p>
                         </div>
                         <div className="flex items-center gap-2">
                           <button onClick={() => updateQty(item.id, -1)} className="p-1 rounded bg-zinc-800 hover:bg-zinc-700"><Minus className="h-3 w-3" /></button>
@@ -406,7 +440,8 @@ export default function POSPage() {
                           <button onClick={() => removeItem(item.id)} className="p-1 rounded bg-red-900/30 text-red-400 hover:bg-red-900/50"><Trash2 className="h-3 w-3" /></button>
                         </div>
                       </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
 
@@ -485,11 +520,14 @@ export default function POSPage() {
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {cart.length === 0 ? <p className="text-zinc-500 text-sm">Cart is empty</p> : (
                   <div className="space-y-2">
-                    {cart.map((item) => (
+                    {cart.map((item) => {
+                      const liveProduct = products.find((p) => p.id === item.id)
+                      const stock = liveProduct?.stock ?? 0
+                      return (
                       <div key={item.id} className="flex items-center justify-between p-2 rounded bg-zinc-950/60 border border-zinc-800">
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm truncate text-white">{item.name}</p>
-                          <p className="text-xs text-zinc-400">{money(item.price)}</p>
+                          <p className="text-xs text-zinc-400">{money(item.price)} · <span className={stock <= 0 ? 'text-red-400' : stock <= (item.minStock ?? 1) ? 'text-yellow-400' : 'text-green-400'}>{stock} in stock</span></p>
                         </div>
                         <div className="flex items-center gap-2">
                           <button onClick={() => updateQty(item.id, -1)} className="p-1 rounded bg-zinc-800 hover:bg-zinc-700"><Minus className="h-3 w-3" /></button>
@@ -498,7 +536,8 @@ export default function POSPage() {
                           <button onClick={() => removeItem(item.id)} className="p-1 rounded bg-red-900/30 text-red-400 hover:bg-red-900/50"><Trash2 className="h-3 w-3" /></button>
                         </div>
                       </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
                 <div className="space-y-2">

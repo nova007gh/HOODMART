@@ -6,7 +6,7 @@ import { DashboardLayout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { store, Product, money } from '@/lib/store'
-import { ensureFreshData } from '@/lib/fresh-data'
+import { pullTable } from '@/lib/fresh-data'
 import { Tag, Printer } from 'lucide-react'
 
 export default function LabelsPage() {
@@ -17,7 +17,7 @@ export default function LabelsPage() {
   const [qty, setQty] = useState(1)
   const [labels, setLabels] = useState<{ name: string; price: number }[]>([])
 
-  useEffect(() => { setProducts(store.getProducts()); ensureFreshData().then(() => setProducts(store.getProducts())) }, [])
+  useEffect(() => { setProducts([...store.getProducts()]); pullTable('products').then(() => setProducts([...store.getProducts()])) }, [])
 
   const generate = (e: React.FormEvent) => {
     e.preventDefault()

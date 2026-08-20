@@ -6,7 +6,7 @@ import { DashboardLayout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { store, Discount, money } from '@/lib/store'
-import { ensureFreshData } from '@/lib/fresh-data'
+import { pullTable } from '@/lib/fresh-data'
 import { Tag, Percent, Banknote } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -15,8 +15,8 @@ export default function DiscountsPage() {
   const [editing, setEditing] = useState<Discount | null>(null)
   const [form, setForm] = useState({ name: '', type: 'percent' as 'percent' | 'fixed', value: '' })
 
-  const reload = () => setDiscounts(store.getDiscounts())
-  useEffect(() => { reload(); ensureFreshData().then(reload) }, [])
+  const reload = () => setDiscounts([...store.getDiscounts()])
+  useEffect(() => { reload(); pullTable('discounts').then(reload) }, [])
 
   const reset = () => { setEditing(null); setForm({ name: '', type: 'percent', value: '' }) }
 

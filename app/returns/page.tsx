@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { store, Sale, money } from '@/lib/store'
 import { pullTable } from '@/lib/fresh-data'
+import * as sync from '@/lib/sync'
+import { notifications } from '@/lib/notifications'
 import { Undo2, Receipt, Search, ChevronLeft, ChevronRight, Calendar, User, Package } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils'
 import toast from 'react-hot-toast'
@@ -99,10 +101,51 @@ export default function ReturnsPage() {
   }, [filtered])
 
   const processReturn = (sale: Sale) => {
+    if (!confirm(`Process return for sale #${sale.id.slice(0, 8)}?\n\n${sale.items.length} item(s) will be restocked. GHS ${sale.total.toFixed(2)} will be deducted from revenue.`)) return
+
+    // Restock items
+    const products = store.getProducts()
+    for (const item of sale.items) {
+      const p = products.find((x) => x.id === item.id)
+      if (p) {
+        p.stock = (p.stock ?? 0) + item.qty
+      }
+    }
+    store.setProducts(products)
+
+    // Remove the sale
     const all = store.getSales().filter((s) => s.id !== sale.id)
     store.setSales(all)
-    setSales(all)
-    toast.success(`Return processed for sale #${sale.id.slice(0, 8)}`)
+    setSales([...all])
+
+    // Push changes to Supabase
+    sale.items.forEach((item) => {
+      const p = products.find((x) => x.id === item.id)
+      if (p) sync.pushLocalChange('products', p)
+    })
+    sync.pushLocalChange('sales', { id: sale.id }, 'delete')
+
+    // Update customer stats if linked
+    if (sale.customerId) {
+      const customers = store.getCustomers()
+      const c = customers.find((x) => x.id === sale.customerId)
+      if (c) {
+        c.purchases = Math.max(0, (c.purchases || 0) - 1)
+        c.total = Math.max(0, (c.total || 0) - sale.total)
+        store.setCustomers(customers)
+        sync.pushLocalChange('customers', c)
+      }
+    }
+
+    // Log the return as an activity
+    notifications.push(
+      'return',
+      'Return processed',
+      `Sale #${sale.id.slice(0, 8)} returned — ${sale.items.length} item(s) restocked, GHS ${sale.total.toFixed(2)} refunded`,
+      { amount: -sale.total, href: '/returns' }
+    )
+
+    toast.success(`Return processed — ${sale.items.length} item(s) restocked, GHS ${sale.total.toFixed(2)} refunded`)
   }
 
   const filterButtons: { key: DateFilter; label: string }[] = [

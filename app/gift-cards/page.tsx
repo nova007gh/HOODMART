@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { store, GiftCard, money, formatDateTime } from '@/lib/store'
-import { ensureFreshData } from '@/lib/fresh-data'
+import { pullTable } from '@/lib/fresh-data'
 import { Gift, Plus, Search, Trash2, PlusCircle, CheckCircle, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -22,8 +22,8 @@ export default function GiftCardsPage() {
   const [redeemAmount, setRedeemAmount] = useState('')
   const [newCard, setNewCard] = useState({ initialBalance: '', customerName: '', customerEmail: '', expiryDate: '', notes: '' })
 
-  const reload = () => setGiftCards(store.getGiftCards())
-  useEffect(() => { reload(); ensureFreshData().then(reload) }, [])
+  const reload = () => setGiftCards([...store.getGiftCards()])
+  useEffect(() => { reload(); pullTable('gift_cards').then(reload) }, [])
 
   const filtered = giftCards.filter((gc) =>
     gc.code.toLowerCase().includes(search.toLowerCase()) ||

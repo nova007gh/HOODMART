@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { store, Employee } from '@/lib/store'
-import { ensureFreshData } from '@/lib/fresh-data'
+import { pullTable } from '@/lib/fresh-data'
 import {
   createUser,
   updateUser,
@@ -62,10 +62,10 @@ export default function EmployeesPage() {
       return
     }
     setIsAdminUser(true)
-    setEmployees(store.getEmployees())
+    setEmployees([...store.getEmployees()])
   }
 
-  useEffect(() => { load(); ensureFreshData().then(load) }, [router])
+  useEffect(() => { load(); pullTable('employees').then(load) }, [router])
 
   const stats = useMemo(() => {
     const active = employees.filter((e) => !e.deleted).length
