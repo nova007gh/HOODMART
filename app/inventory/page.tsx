@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { store, Product, money } from '@/lib/store'
 import { pullTable } from '@/lib/fresh-data'
+import * as sync from '@/lib/sync'
 import { Package, Search, Plus, Minus, AlertTriangle, Calendar, Image as ImageIcon, Trash2, Archive, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
@@ -69,16 +70,18 @@ export default function InventoryPage() {
   const expired = products.filter((p) => { const d = daysUntil(p.expiryDate); return d !== Infinity && d < 0 })
   const totalValue = products.reduce((sum, p) => sum + (p.stock ?? 0) * (p.cost ?? p.price), 0)
 
-  const adjustStock = (id: string, delta: number) => {
+  const adjustStock = async (id: string, delta: number) => {
     const p = products.find((x) => x.id === id)
     if (!p) return
     const next = Math.max(0, (p.stock ?? 0) + delta)
     store.updateProduct(id, { stock: next })
     reload()
     toast.success(`${p.name} stock updated`)
+    // Push to server and verify
+    await sync.pushLocalChange('products', store.getProducts().find((x) => x.id === id))
   }
 
-  const applyAdjust = () => {
+  const applyAdjust = async () => {
     if (!adjust) return
     const p = products.find((x) => x.id === adjust.id)
     if (!p) return
@@ -87,7 +90,9 @@ export default function InventoryPage() {
     store.updateProduct(adjust.id, { stock: next })
     reload()
     setAdjust(null)
-    toast.success(`${p.name} restocked`)
+    toast.success(`${p.name} restocked to ${next} units`)
+    // Push to server and verify
+    await sync.pushLocalChange('products', store.getProducts().find((x) => x.id === adjust?.id))
   }
 
   const deleteProduct = (id: string) => {

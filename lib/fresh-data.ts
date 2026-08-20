@@ -34,26 +34,56 @@ const TABLE_KEYS: Record<string, string> = {
  * Merge local-only fields (like avatar) that may not exist in Supabase yet.
  * When the server returns employees without an avatar column, we preserve
  * the avatar from localStorage so profile pictures don't disappear.
+ *
+ * For products: if a local product has a newer updated_at than the server
+ * version, keep the local copy (the user just edited it and the push may
+ * not have completed yet, or the server data is stale).
  */
 function mergeLocalFields(table: string, serverData: any[]): any[] {
-  if (table !== 'employees' || typeof window === 'undefined') return serverData
-  const key = TABLE_KEYS.employees
+  if (typeof window === 'undefined') return serverData
+  const key = TABLE_KEYS[table]
   if (!key) return serverData
+
   try {
     const raw = localStorage.getItem(key)
     if (!raw) return serverData
     const localData: any[] = JSON.parse(raw)
-    const avatarMap = new Map<string, string>()
-    for (const e of localData) {
-      if (e.id && e.avatar) avatarMap.set(e.id, e.avatar)
-    }
-    if (avatarMap.size === 0) return serverData
-    return serverData.map((e) => {
-      if (!e.avatar && avatarMap.has(e.id)) {
-        return { ...e, avatar: avatarMap.get(e.id) }
+
+    if (table === 'employees') {
+      const avatarMap = new Map<string, string>()
+      for (const e of localData) {
+        if (e.id && e.avatar) avatarMap.set(e.id, e.avatar)
       }
-      return e
-    })
+      if (avatarMap.size === 0) return serverData
+      return serverData.map((e) => {
+        if (!e.avatar && avatarMap.has(e.id)) {
+          return { ...e, avatar: avatarMap.get(e.id) }
+        }
+        return e
+      })
+    }
+
+    if (table === 'products') {
+      // Build a map of local products by ID with their updated_at
+      const localMap = new Map<string, any>()
+      for (const p of localData) {
+        if (p.id) localMap.set(p.id, p)
+      }
+      // For each server product, check if local version is newer
+      return serverData.map((s) => {
+        const local = localMap.get(s.id)
+        if (!local) return s
+        const localUpdated = local.updated_at ? new Date(local.updated_at).getTime() : 0
+        const serverUpdated = s.updated_at ? new Date(s.updated_at).getTime() : 0
+        // If local was updated more recently (within last 60s), keep local
+        if (localUpdated > serverUpdated && (Date.now() - localUpdated) < 60000) {
+          return local
+        }
+        return s
+      })
+    }
+
+    return serverData
   } catch {
     return serverData
   }

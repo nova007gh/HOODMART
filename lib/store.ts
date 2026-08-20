@@ -22,6 +22,9 @@ export interface Product {
   isSerialized?: boolean
   deleted?: boolean
   discountPercent?: number
+  updated_at?: string
+  device_id?: string
+  store_id?: string
 }
 
 export interface Activity {

@@ -39,15 +39,18 @@ function daysUntil(date?: string) {
 function GoldBar({ value, max, label, total, isCurrency }: { value: number; max: number; label: string; total?: number; isCurrency?: boolean }) {
   const pct = max > 0 ? Math.max(4, Math.round((value / max) * 100)) : 0
   const display = isCurrency && total ? money(total) : value.toString()
+  const hasValue = value > 0
   return (
     <div className="flex flex-col items-center gap-2 flex-1 min-w-0 group">
       <div className="w-full flex-1 bg-zinc-800/30 rounded-t-lg relative flex items-end overflow-hidden border border-zinc-700/30">
         <div
-          className="w-full rounded-t-md transition-all duration-700 ease-out relative"
+          className={`w-full rounded-t-md transition-all duration-700 ease-out relative ${hasValue ? '' : 'opacity-30'}`}
           style={{
-            height: `${pct}%`,
-            background: 'linear-gradient(to top, #92600a 0%, #d4a017 40%, #f5c842 70%, #fff4c2 100%)',
-            boxShadow: '0 0 16px rgba(245, 200, 66, 0.5), inset 0 1px 0 rgba(255,255,255,0.3)',
+            height: `${hasValue ? pct : 3}%`,
+            background: hasValue
+              ? 'linear-gradient(to top, #92600a 0%, #d4a017 40%, #f5c842 70%, #fff4c2 100%)'
+              : 'linear-gradient(to top, #3f3f46 0%, #52525b 100%)',
+            boxShadow: hasValue ? '0 0 16px rgba(245, 200, 66, 0.5), inset 0 1px 0 rgba(255,255,255,0.3)' : 'none',
           }}
           title={display}
         >
@@ -57,7 +60,7 @@ function GoldBar({ value, max, label, total, isCurrency }: { value: number; max:
           </div>
         </div>
       </div>
-      <p className="text-[10px] text-zinc-500 truncate w-full text-center group-hover:text-yellow-400 transition-colors">{label}</p>
+      <p className={`text-[10px] truncate w-full text-center transition-colors ${hasValue ? 'text-zinc-400 group-hover:text-yellow-400' : 'text-zinc-600'}`}>{label}</p>
     </div>
   )
 }
@@ -118,7 +121,7 @@ export default function DashboardPage() {
   const [lastSynced, setLastSynced] = useState<string>('')
   const [syncing, setSyncing] = useState(false)
 
-  const reload = () => { setSales(store.getSales()); setProducts(store.getProducts()) }
+  const reload = () => { setSales([...store.getSales()]); setProducts([...store.getProducts()]) }
 
   // Pull from the server-side sync API (bypasses RLS) and write to localStorage,
   // then reload. This is the key fix: the browser's anon key can't read from
@@ -277,6 +280,22 @@ export default function DashboardPage() {
     }))
     return todayRevenue - cost
   }, [todaySales, products, todayRevenue])
+
+  // Products updated today
+  const productsUpdatedToday = useMemo(() => {
+    return products
+      .filter((p) => {
+        if (!p.updated_at) return false
+        const d = new Date(p.updated_at)
+        if (isNaN(d.getTime())) return false
+        return d.toISOString().slice(0, 10) === today
+      })
+      .sort((a, b) => {
+        const aT = a.updated_at ? new Date(a.updated_at).getTime() : 0
+        const bT = b.updated_at ? new Date(b.updated_at).getTime() : 0
+        return bT - aT
+      })
+  }, [products, today])
 
   // Week-over-week change calculations
   const weekChanges = useMemo(() => {
@@ -450,6 +469,70 @@ export default function DashboardPage() {
                   <Receipt className="h-8 w-8 text-zinc-700 mx-auto mb-2" />
                   <p className="text-sm text-zinc-500">No sales recorded today yet.</p>
                   <p className="text-xs text-zinc-600 mt-1">Sales will appear here automatically as they happen.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Products Updated Today */}
+        {canManageProducts && (
+          <Card className="glass-card border-blue-500/20 mb-8 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-blue-500/10 to-transparent rounded-bl-full" />
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                    <Package className="h-5 w-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-white">Products Updated Today</h2>
+                    <p className="text-xs text-zinc-500">{productsUpdatedToday.length} product{productsUpdatedToday.length === 1 ? '' : 's'} modified today</p>
+                  </div>
+                </div>
+                <Link href="/inventory" className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1">
+                  View Inventory <ArrowUpRight className="h-3 w-3" />
+                </Link>
+              </div>
+
+              {productsUpdatedToday.length > 0 ? (
+                <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                  {productsUpdatedToday.slice(0, 20).map((p) => {
+                    const d = p.updated_at ? new Date(p.updated_at) : null
+                    const timeStr = d ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
+                    return (
+                      <div key={p.id} className="flex items-center justify-between p-2.5 rounded-lg bg-zinc-900/60 border border-zinc-800 hover:border-blue-500/20 transition-colors">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className="h-8 w-8 rounded bg-zinc-800 flex items-center justify-center shrink-0 overflow-hidden">
+                            {p.image ? <img src={p.image} alt={p.name} className="h-full w-full object-cover" /> : <Package className="h-4 w-4 text-zinc-600" />}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-white truncate">{p.name}</p>
+                            <p className="text-xs text-zinc-500">{p.barcode || 'No barcode'} · {timeStr}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <div className="text-right">
+                            <p className="text-xs text-zinc-500">Stock</p>
+                            <p className={`text-sm font-bold ${(p.stock ?? 0) <= 0 ? 'text-red-400' : (p.stock ?? 0) <= (p.minStock ?? 1) ? 'text-yellow-400' : 'text-green-400'}`}>{p.stock ?? 0}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-zinc-500">Price</p>
+                            <p className="text-sm font-bold text-white">{money(p.price)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {productsUpdatedToday.length > 20 && (
+                    <p className="text-center text-xs text-zinc-500 py-2">+ {productsUpdatedToday.length - 20} more products updated today</p>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8 border-t border-zinc-800">
+                  <Package className="h-8 w-8 text-zinc-700 mx-auto mb-2" />
+                  <p className="text-sm text-zinc-500">No products updated today yet.</p>
+                  <p className="text-xs text-zinc-600 mt-1">Product changes will appear here as they happen.</p>
                 </div>
               )}
             </CardContent>

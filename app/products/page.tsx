@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { store, Product, money } from '@/lib/store'
 import { pullTable } from '@/lib/fresh-data'
+import * as sync from '@/lib/sync'
 import { optimizeImage, formatBytes } from '@/lib/image'
 import { Search, Package, Plus, X, Camera, Calendar, AlertTriangle, Edit2, Trash2, Save, Image as ImageIcon, Loader2 } from 'lucide-react'
 import { Pagination } from '@/components/pagination'
@@ -159,7 +160,7 @@ export default function ProductsPage() {
     }
   }
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.name || !form.price) return toast.error('Name and price are required')
     const payload: Omit<Product, 'id'> = {
@@ -179,6 +180,9 @@ export default function ProductsPage() {
     if (editing) {
       store.updateProduct(editing.id, payload)
       toast.success('Product updated')
+      // Explicitly push to server
+      const updated = store.getProducts().find((p) => p.id === editing.id)
+      if (updated) await sync.pushLocalChange('products', updated)
     } else {
       store.addProduct(payload)
       toast.success('Product added')
