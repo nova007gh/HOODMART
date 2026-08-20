@@ -39,7 +39,11 @@ export default function InventoryPage() {
   const [loading, setLoading] = useState(true)
   const PAGE_SIZE = 25
 
-  const reload = () => setProducts([...store.getProducts()])
+  const reload = () => {
+    const all = store.getProducts()
+    if (all.length === 0 && products.length > 0) return
+    setProducts([...all])
+  }
   useEffect(() => {
     reload()
     setLoading(true)
@@ -70,18 +74,19 @@ export default function InventoryPage() {
   const expired = products.filter((p) => { const d = daysUntil(p.expiryDate); return d !== Infinity && d < 0 })
   const totalValue = products.reduce((sum, p) => sum + (p.stock ?? 0) * (p.cost ?? p.price), 0)
 
-  const adjustStock = async (id: string, delta: number) => {
+  const adjustStock = (id: string, delta: number) => {
     const p = products.find((x) => x.id === id)
     if (!p) return
     const next = Math.max(0, (p.stock ?? 0) + delta)
     store.updateProduct(id, { stock: next })
     reload()
     toast.success(`${p.name} stock updated`)
-    // Push to server and verify
-    await sync.pushLocalChange('products', store.getProducts().find((x) => x.id === id))
+    // Push to server in the background
+    const updated = store.getProducts().find((x) => x.id === id)
+    if (updated) sync.pushLocalChange('products', updated).catch(() => {})
   }
 
-  const applyAdjust = async () => {
+  const applyAdjust = () => {
     if (!adjust) return
     const p = products.find((x) => x.id === adjust.id)
     if (!p) return
@@ -91,8 +96,9 @@ export default function InventoryPage() {
     reload()
     setAdjust(null)
     toast.success(`${p.name} restocked to ${next} units`)
-    // Push to server and verify
-    await sync.pushLocalChange('products', store.getProducts().find((x) => x.id === adjust?.id))
+    // Push to server in the background
+    const updated = store.getProducts().find((x) => x.id === adjust.id)
+    if (updated) sync.pushLocalChange('products', updated).catch(() => {})
   }
 
   const deleteProduct = (id: string) => {

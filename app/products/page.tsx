@@ -78,7 +78,13 @@ export default function ProductsPage() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(12)
 
-  const reload = () => setProducts([...store.getProducts()])
+  const reload = () => {
+    const all = store.getProducts()
+    // Guard: never set products to empty if we just had products
+    // (protects against race conditions with background sync)
+    if (all.length === 0 && products.length > 0) return
+    setProducts([...all])
+  }
   useEffect(() => { reload(); pullTable('products').then(reload) }, [])
 
   useEffect(() => {
@@ -160,7 +166,7 @@ export default function ProductsPage() {
     }
   }
 
-  const submit = async (e: React.FormEvent) => {
+  const submit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.name || !form.price) return toast.error('Name and price are required')
     const payload: Omit<Product, 'id'> = {
@@ -178,15 +184,17 @@ export default function ProductsPage() {
       image: form.image,
     }
     if (editing) {
+      // Update localStorage first — this is the source of truth for the UI
       store.updateProduct(editing.id, payload)
       toast.success('Product updated')
-      // Explicitly push to server
+      // Push to server in the background (don't block the UI)
       const updated = store.getProducts().find((p) => p.id === editing.id)
-      if (updated) await sync.pushLocalChange('products', updated)
+      if (updated) sync.pushLocalChange('products', updated).catch(() => {})
     } else {
       store.addProduct(payload)
       toast.success('Product added')
     }
+    // Reload immediately from localStorage (which was just updated synchronously)
     reload()
     setOpen(false)
     setEditing(null)

@@ -241,7 +241,7 @@ export const store = {
     const products = store.getProducts()
     const idx = products.findIndex((x) => x.id === id)
     if (idx >= 0) {
-      products[idx] = { ...products[idx], ...p }
+      products[idx] = { ...products[idx], ...p, updated_at: new Date().toISOString() }
       store.setProducts(products)
       sync.pushLocalChange('products', products[idx])
     }
