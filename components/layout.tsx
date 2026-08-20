@@ -31,6 +31,8 @@ import {
   Gift,
   Receipt,
   FileText,
+  Wifi,
+  WifiOff,
 } from 'lucide-react'
 
 const navigation = [
@@ -62,6 +64,32 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const { session, logout } = useAuth()
   const [storeName, setStoreName] = useState('HOODMART')
+  const [isOnline, setIsOnline] = useState(true)
+  const [pendingCount, setPendingCount] = useState(0)
+
+  useEffect(() => {
+    const updateOnline = () => setIsOnline(navigator.onLine)
+    updateOnline()
+    window.addEventListener('online', updateOnline)
+    window.addEventListener('offline', updateOnline)
+
+    // Check pending sync count periodically
+    const checkPending = () => {
+      try {
+        const raw = localStorage.getItem('hoodmart_pending_sync')
+        if (raw) setPendingCount(JSON.parse(raw).length)
+        else setPendingCount(0)
+      } catch { setPendingCount(0) }
+    }
+    checkPending()
+    const interval = setInterval(checkPending, 3000)
+
+    return () => {
+      window.removeEventListener('online', updateOnline)
+      window.removeEventListener('offline', updateOnline)
+      clearInterval(interval)
+    }
+  }, [])
 
   useEffect(() => {
     const name = session?.storeName
@@ -167,6 +195,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       {/* Main content */}
       <main className="flex-1 min-w-0 flex flex-col min-h-screen">
         <SubscriptionBanner />
+        {!isOnline && (
+          <div className="bg-red-500/20 border-b border-red-500/30 text-red-300 text-xs text-center py-1.5 px-4 flex items-center justify-center gap-2">
+            <WifiOff className="h-3.5 w-3.5 shrink-0" />
+            <span>You are offline. Sales will still work and will sync automatically when you reconnect{pendingCount > 0 ? ` (${pendingCount} pending)` : ''}.</span>
+          </div>
+        )}
         <header className="sticky top-0 z-30 bg-zinc-900 border-b border-yellow-500/20 h-16 flex items-center justify-between px-4 sm:px-6 lg:px-8">
           <button
             onClick={() => setSidebarOpen(true)}
@@ -176,6 +210,27 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           </button>
           <div className="flex-1" />
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Online/Offline indicator */}
+            <div
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                isOnline
+                  ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                  : 'bg-red-500/10 text-red-400 border border-red-500/20 animate-pulse'
+              }`}
+              title={isOnline ? 'Connected to the internet' : `Offline — ${pendingCount} change(s) will sync when back online`}
+            >
+              {isOnline ? (
+                <>
+                  <Wifi className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Online</span>
+                </>
+              ) : (
+                <>
+                  <WifiOff className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Offline{pendingCount > 0 ? ` · ${pendingCount} pending` : ''}</span>
+                </>
+              )}
+            </div>
             {isAdmin(session?.user ?? null) && <NotificationBell />}
             {hasPermission(session?.user ?? null, PERMISSIONS.PROCESS_SALES) && (
               <Button asChild className="gold-gradient text-black">

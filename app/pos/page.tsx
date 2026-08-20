@@ -9,7 +9,7 @@ import { store, Product, Discount, CartItem, computeTotals, money, Sale, Branch,
 import { getSession, hasPermission, PERMISSIONS } from '@/lib/auth'
 import { pullTable } from '@/lib/fresh-data'
 import { notifications, emailAdmin } from '@/lib/notifications'
-import { Search, ShoppingCart, Plus, Minus, Trash2, CreditCard, Printer, X, Banknote, AlertTriangle, Image as ImageIcon, Calendar, Archive, FolderOpen, Building2, Mail, CheckCircle } from 'lucide-react'
+import { Search, ShoppingCart, Plus, Minus, Trash2, CreditCard, Printer, X, Banknote, AlertTriangle, Image as ImageIcon, Calendar, Archive, FolderOpen, Building2, Mail, CheckCircle, Package } from 'lucide-react'
 import { POSAIAssistant } from '@/components/pos-ai-assistant'
 import { CashierCard } from '@/components/cashier-card'
 import { Pagination } from '@/components/pagination'
@@ -156,10 +156,12 @@ export default function POSPage() {
 
     handleEmails(sale)
 
+    // Always show the receipt modal with items sold summary
+    setReceipt(sale)
+
     if (withPrint) {
-      setReceipt(sale)
-    } else {
-      toast.success(`Sale completed — ${money(sale.total)}`, { icon: '✅' })
+      // Auto-trigger print dialog after the receipt modal renders
+      setTimeout(() => printReceipt(), 300)
     }
   }
 
@@ -612,34 +614,66 @@ export default function POSPage() {
 
         {receipt && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 no-print print-receipt-overlay">
-            <Card className="w-full max-w-md bg-white text-black">
-              <CardHeader className="flex flex-row items-center justify-between no-print">
-                <CardTitle className="text-black text-lg font-bold flex items-center gap-2"><CheckCircle className="h-5 w-5 text-green-600" /> Sale Completed</CardTitle>
+            <Card className="w-full max-w-md bg-white text-black max-h-[90vh] overflow-y-auto">
+              <CardHeader className="flex flex-row items-center justify-between border-b border-zinc-300 no-print">
+                <CardTitle className="text-black text-lg font-bold flex items-center gap-2"><CheckCircle className="h-6 w-6 text-green-600" /> Sale Completed</CardTitle>
                 <button onClick={() => setReceipt(null)} className="text-zinc-500 hover:text-black"><X className="h-5 w-5" /></button>
               </CardHeader>
-              <CardContent className="space-y-3 print-receipt-content">
+              <CardContent className="space-y-4 print-receipt-content">
+                {/* Success banner */}
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center no-print">
+                  <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-1" />
+                  <p className="text-sm font-bold text-green-700">Sale completed successfully!</p>
+                  <p className="text-xs text-green-600 mt-0.5">{receipt.items.reduce((a, i) => a + i.qty, 0)} item(s) sold · {money(receipt.total)}</p>
+                </div>
+
+                {/* Store info */}
                 <div className="text-center border-b border-zinc-300 pb-3">
                   <p className="font-bold text-lg">HOODMART</p>
                   <p className="text-xs text-zinc-500">{new Date(receipt.timestamp).toLocaleString()}</p>
                   <p className="text-xs text-zinc-500 uppercase">{receipt.paymentMethod}</p>
                   <p className="text-xs text-zinc-500">Served by: {receipt.userName || receipt.userEmail || 'Unknown'}</p>
                 </div>
-                <div className="space-y-1 text-sm">
-                  {receipt.items.map((item) => (
-                    <div key={item.id} className="flex justify-between">
-                      <span>{item.name} x{item.qty}</span>
-                      <span>{money(item.price * item.qty)}</span>
-                    </div>
-                  ))}
+
+                {/* Items sold summary */}
+                <div>
+                  <h3 className="text-sm font-bold text-zinc-700 mb-2 flex items-center gap-1.5">
+                    <Package className="h-4 w-4" /> Items Sold ({receipt.items.length})
+                  </h3>
+                  <div className="space-y-2">
+                    {receipt.items.map((item) => (
+                      <div key={item.id} className="flex items-center justify-between p-2 rounded bg-zinc-50 border border-zinc-200">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {item.image ? (
+                            <img src={item.image} alt={item.name} className="h-8 w-8 rounded object-cover shrink-0" />
+                          ) : (
+                            <div className="h-8 w-8 rounded bg-zinc-200 flex items-center justify-center shrink-0">
+                              <Package className="h-4 w-4 text-zinc-400" />
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-black truncate">{item.name}</p>
+                            <p className="text-xs text-zinc-500">{money(item.price)} each x {item.qty}</p>
+                          </div>
+                        </div>
+                        <span className="text-sm font-bold text-black shrink-0">{money(item.price * item.qty)}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="border-t border-zinc-300 pt-2 space-y-1 text-sm">
+
+                {/* Totals */}
+                <div className="border-t border-zinc-300 pt-3 space-y-1 text-sm">
                   <div className="flex justify-between"><span>Subtotal</span><span>{money(receipt.subtotal)}</span></div>
                   {receipt.discount > 0 && <div className="flex justify-between"><span>Discount</span><span>-{money(receipt.discount)}</span></div>}
-                  <div className="flex justify-between text-lg font-bold"><span>Total</span><span>{money(receipt.total)}</span></div>
+                  <div className="flex justify-between text-lg font-bold border-t border-zinc-300 pt-1"><span>Total</span><span>{money(receipt.total)}</span></div>
                 </div>
-                <p className="text-center text-xs mt-4 text-zinc-500">Thank you for shopping with us!</p>
-                <div className="flex gap-2 no-print pt-2 border-t border-zinc-300">
-                  <Button onClick={printReceipt} className="flex-1 bg-zinc-900 text-white hover:bg-zinc-800"><Printer className="h-4 w-4 mr-2" /> Print Receipt</Button>
+
+                <p className="text-center text-xs mt-2 text-zinc-500">Thank you for shopping with us!</p>
+
+                {/* Action buttons */}
+                <div className="flex gap-2 no-print pt-3 border-t border-zinc-300">
+                  <Button onClick={printReceipt} className="flex-1 bg-zinc-900 text-white hover:bg-zinc-800"><Printer className="h-4 w-4 mr-2" /> Print</Button>
                   <Button onClick={() => setReceipt(null)} className="flex-1 gold-gradient text-black font-bold"><ShoppingCart className="h-4 w-4 mr-2" /> New Sale</Button>
                 </div>
               </CardContent>
