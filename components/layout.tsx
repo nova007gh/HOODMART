@@ -23,7 +23,6 @@ import {
   LogOut,
   Menu,
   UserCheck,
-  Tag as TagIcon,
   Brain,
   Briefcase,
   Truck,
@@ -51,10 +50,8 @@ const navigation = [
   { name: 'Gift Cards', href: '/gift-cards', icon: Gift, perm: PERMISSIONS.MANAGE_GIFT_CARDS },
   { name: 'Expenses', href: '/expenses', icon: Receipt, perm: PERMISSIONS.MANAGE_EXPENSES },
   { name: 'Discounts', href: '/discounts', icon: Tag, perm: PERMISSIONS.MANAGE_DISCOUNTS },
-  { name: 'Labels', href: '/labels', icon: TagIcon, perm: PERMISSIONS.MANAGE_PRODUCTS },
   { name: 'Reports', href: '/reports', icon: BarChart3, perm: PERMISSIONS.VIEW_REPORTS },
   { name: 'Intelligence', href: '/dashboard/assistant', icon: Brain, perm: null },
-  { name: 'Billing', href: '/billing', icon: CreditCard, perm: PERMISSIONS.MANAGE_BILLING },
   { name: 'Settings', href: '/settings', icon: Settings, perm: null },
 ]
 
