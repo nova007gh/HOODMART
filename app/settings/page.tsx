@@ -6,7 +6,7 @@ import { DashboardLayout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { Settings, Store, Bell, Lock, Download, Upload, Trash2, KeyRound, Users, Palette, Sun, Moon, User, Mail, CreditCard, Tag as TagIcon, ArrowUpRight } from 'lucide-react'
+import { Settings, Store, Bell, Lock, Download, Upload, Trash2, KeyRound, Users, Palette, Sun, Moon, User, Mail, CreditCard, Tag as TagIcon, ArrowUpRight, Activity, FileText, Receipt, Building2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getSession, updateUser, isAdmin } from '@/lib/auth'
 import { getTheme, setTheme, Theme } from '@/lib/theme'
@@ -191,6 +191,62 @@ export default function SettingsPage() {
                 <p className="text-sm text-zinc-400">Generate and print product labels and barcodes for your inventory.</p>
                 <Button asChild type="button" variant="outline" className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
                   <Link href="/labels">Open Labels <ArrowUpRight className="h-3.5 w-3.5 ml-1 inline" /></Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {userIsAdmin && (
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2"><Activity className="h-5 w-5 text-yellow-500" /> Activities</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-zinc-400">View the log of team actions — sales, stock changes, customer additions and more.</p>
+                <Button asChild type="button" variant="outline" className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
+                  <Link href="/activities">Open Activities <ArrowUpRight className="h-3.5 w-3.5 ml-1 inline" /></Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {userIsAdmin && (
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2"><Building2 className="h-5 w-5 text-yellow-500" /> Branches</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-zinc-400">Manage your store branches, view per-branch performance and assign staff.</p>
+                <Button asChild type="button" variant="outline" className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
+                  <Link href="/branches">Open Branches <ArrowUpRight className="h-3.5 w-3.5 ml-1 inline" /></Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {userIsAdmin && (
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2"><FileText className="h-5 w-5 text-yellow-500" /> Quotations</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-zinc-400">Create and manage price quotations for customers and bulk buyers.</p>
+                <Button asChild type="button" variant="outline" className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
+                  <Link href="/quotations">Open Quotations <ArrowUpRight className="h-3.5 w-3.5 ml-1 inline" /></Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {userIsAdmin && (
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2"><Receipt className="h-5 w-5 text-yellow-500" /> Expenses</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-zinc-400">Record and track business expenses — rent, utilities, supplies and more.</p>
+                <Button asChild type="button" variant="outline" className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
+                  <Link href="/expenses">Open Expenses <ArrowUpRight className="h-3.5 w-3.5 ml-1 inline" /></Link>
                 </Button>
               </CardContent>
             </Card>
