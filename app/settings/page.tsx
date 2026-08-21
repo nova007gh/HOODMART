@@ -6,12 +6,12 @@ import { DashboardLayout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { Settings, Store, Bell, Lock, Download, Upload, Trash2, KeyRound, Users, Palette, Sun, Moon, User, Mail, CreditCard, Tag as TagIcon, ArrowUpRight, Activity, FileText, Receipt, Building2 } from 'lucide-react'
+import { Settings, Store, Bell, Lock, Download, Upload, Trash2, KeyRound, Users, Palette, Sun, Moon, User, Mail, CreditCard, Tag as TagIcon, ArrowUpRight, Activity, FileText, Receipt, Building2, DollarSign, ShoppingCart, Wallet } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getSession, updateUser, isAdmin } from '@/lib/auth'
 import { getTheme, setTheme, Theme } from '@/lib/theme'
 
-import { KEYS as STORE_KEYS } from '@/lib/store'
+import { KEYS as STORE_KEYS, store, money } from '@/lib/store'
 
 const KEYS = [
   STORE_KEYS.PRODUCTS,
@@ -46,6 +46,7 @@ export default function SettingsPage() {
   const [theme, setThemeState] = useState<Theme>('gold')
   const [userIsAdmin, setUserIsAdmin] = useState(false)
   const [emailAlerts, setEmailAlerts] = useState(true)
+  const [allTimeStats, setAllTimeStats] = useState({ revenue: 0, orders: 0, customers: 0, profit: 0 })
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -56,6 +57,21 @@ export default function SettingsPage() {
     setThemeState(getTheme())
     const session = getSession()
     setUserIsAdmin(isAdmin(session?.user ?? null))
+
+    // Calculate all-time stats
+    const sales = store.getSales()
+    const products = store.getProducts()
+    const totalRevenue = sales.reduce((sum, s) => sum + (s.total || 0), 0)
+    const uniqueCustomers = new Set(sales.map((s) => s.customer).filter(Boolean)).size
+    const grossProfit = sales.reduce((sum, s) => {
+      const itemProfit = s.items.reduce((p, item) => {
+        const prod = products.find((x) => x.id === item.id)
+        const cost = prod?.cost || 0
+        return p + (item.price - cost) * item.qty
+      }, 0)
+      return sum + itemProfit
+    }, 0)
+    setAllTimeStats({ revenue: totalRevenue, orders: sales.length, customers: uniqueCustomers, profit: grossProfit })
   }, [])
 
   const handleThemeChange = (t: Theme) => {
@@ -155,6 +171,46 @@ export default function SettingsPage() {
               )}
             </CardContent>
           </Card>
+
+          {userIsAdmin && (
+            <Card className="glass-card md:col-span-2">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2"><DollarSign className="h-5 w-5 text-yellow-500" /> All-Time Business Stats</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="rounded-lg bg-zinc-900/60 border border-zinc-800 p-4">
+                    <div className="flex items-center gap-2 text-zinc-400 text-xs mb-1">
+                      <DollarSign className="h-3.5 w-3.5 text-yellow-500" /> Total Sales
+                    </div>
+                    <p className="text-xl font-bold gold-text">{money(allTimeStats.revenue)}</p>
+                    <p className="text-xs text-zinc-500 mt-0.5">{allTimeStats.orders} transactions (all-time)</p>
+                  </div>
+                  <div className="rounded-lg bg-zinc-900/60 border border-zinc-800 p-4">
+                    <div className="flex items-center gap-2 text-zinc-400 text-xs mb-1">
+                      <ShoppingCart className="h-3.5 w-3.5 text-yellow-500" /> Total Orders
+                    </div>
+                    <p className="text-xl font-bold gold-text">{allTimeStats.orders.toLocaleString()}</p>
+                    <p className="text-xs text-zinc-500 mt-0.5">All time orders</p>
+                  </div>
+                  <div className="rounded-lg bg-zinc-900/60 border border-zinc-800 p-4">
+                    <div className="flex items-center gap-2 text-zinc-400 text-xs mb-1">
+                      <Users className="h-3.5 w-3.5 text-yellow-500" /> Customers
+                    </div>
+                    <p className="text-xl font-bold gold-text">{allTimeStats.customers.toLocaleString()}</p>
+                    <p className="text-xs text-zinc-500 mt-0.5">Unique customers</p>
+                  </div>
+                  <div className="rounded-lg bg-green-500/10 border border-green-500/20 p-4">
+                    <div className="flex items-center gap-2 text-zinc-400 text-xs mb-1">
+                      <Wallet className="h-3.5 w-3.5 text-green-500" /> Net Profit
+                    </div>
+                    <p className="text-xl font-bold text-green-400">{money(allTimeStats.profit)}</p>
+                    <p className="text-xs text-zinc-500 mt-0.5">Estimated margin</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="glass-card">
             <CardHeader>

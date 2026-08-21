@@ -252,13 +252,6 @@ export default function DashboardPage() {
     }))
   }, [sales, products])
 
-  // Unique customers
-  const uniqueCustomers = useMemo(() => {
-    const set = new Set<string>()
-    sales.forEach((s) => { if (s.customer) set.add(s.customer) })
-    return set.size
-  }, [sales])
-
   // Gross profit estimate (sales - cost)
   const grossProfit = useMemo(() => {
     let cost = 0
@@ -355,18 +348,6 @@ export default function DashboardPage() {
               </Button>
             )}
           </div>
-        </div>
-
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {canViewReports && (
-            <>
-              <KPICard icon={DollarSign} label="Total Sales" value={money(totalRevenue)} change={weekChanges.revenue} changeLabel={`${sales.length} transactions (all-time)`} />
-              <KPICard icon={ShoppingCart} label="Total Orders" value={sales.length.toLocaleString()} change={weekChanges.orders} changeLabel="All time orders" />
-              <KPICard icon={Users} label="Customers" value={uniqueCustomers.toLocaleString()} change={weekChanges.customers} changeLabel="Unique customers" />
-              <KPICard icon={Wallet} label="Net Profit" value={money(grossProfit)} change={weekChanges.profit} changeLabel="Estimated margin" accent="bg-green-500/10" />
-            </>
-          )}
         </div>
 
         {/* Today's Sales — separated from all-time general sales */}
