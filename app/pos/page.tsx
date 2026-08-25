@@ -5,11 +5,12 @@ import { AuthGuard } from '@/components/auth-guard'
 import { DashboardLayout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { store, Product, Discount, CartItem, computeTotals, money, Sale, Branch, formatDateTime } from '@/lib/store'
+import { Input } from '@/components/ui/input'
+import { store, Product, Discount, CartItem, computeTotals, money, Sale, Branch, Customer, formatDateTime } from '@/lib/store'
 import { getSession, hasPermission, PERMISSIONS } from '@/lib/auth'
 import { pullTable } from '@/lib/fresh-data'
 import { notifications, emailAdmin } from '@/lib/notifications'
-import { Search, ShoppingCart, Plus, Minus, Trash2, CreditCard, Printer, X, Banknote, AlertTriangle, Image as ImageIcon, Calendar, Archive, FolderOpen, Building2, Mail, CheckCircle, Package } from 'lucide-react'
+import { Search, ShoppingCart, Plus, Minus, Trash2, CreditCard, Printer, X, Banknote, AlertTriangle, Image as ImageIcon, Calendar, Archive, FolderOpen, Building2, Mail, CheckCircle, Package, User, UserPlus, Users } from 'lucide-react'
 import { POSAIAssistant } from '@/components/pos-ai-assistant'
 import { CashierCard } from '@/components/cashier-card'
 import { Pagination } from '@/components/pagination'
@@ -33,12 +34,49 @@ export default function POSPage() {
   const [branches, setBranches] = useState<Branch[]>([])
   const [branchId, setBranchId] = useState('')
   const [customerEmail, setCustomerEmail] = useState('')
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
+  const [showCustomerPicker, setShowCustomerPicker] = useState(false)
+  const [customerSearch, setCustomerSearch] = useState('')
+  const [showQuickAdd, setShowQuickAdd] = useState(false)
+  const [quickAddForm, setQuickAddForm] = useState({ name: '', phone: '', email: '' })
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(60)
   const [canManageProducts, setCanManageProducts] = useState(false)
   const [salesTick, setSalesTick] = useState(0)
 
   const reload = () => { setProducts([...store.getProducts()]); setDiscounts([...store.getDiscounts()]); setBranches([...store.getBranches()]) }
+
+  const selectCustomer = (c: Customer | null) => {
+    setSelectedCustomer(c)
+    setCustomerEmail(c?.email || '')
+    setShowCustomerPicker(false)
+    setCustomerSearch('')
+  }
+
+  const quickAddCustomer = () => {
+    if (!quickAddForm.name.trim()) return toast.error('Customer name is required')
+    store.addCustomer({ name: quickAddForm.name.trim(), phone: quickAddForm.phone.trim(), email: quickAddForm.email.trim(), address: '', companyName: '', purchases: 0, total: 0 })
+    const added = store.getCustomers().find((c) => c.name === quickAddForm.name.trim() && c.email === quickAddForm.email.trim())
+    if (added) {
+      selectCustomer(added)
+      toast.success('Customer added and selected')
+    } else {
+      toast.success('Customer added')
+    }
+    setQuickAddForm({ name: '', phone: '', email: '' })
+    setShowQuickAdd(false)
+  }
+
+  const filteredCustomers = useMemo(() => {
+    const all = store.getCustomers()
+    const term = customerSearch.toLowerCase()
+    if (!term) return all.slice(0, 20)
+    return all.filter((c) =>
+      String(c.name || '').toLowerCase().includes(term) ||
+      String(c.phone || '').toLowerCase().includes(term) ||
+      String(c.email || '').toLowerCase().includes(term)
+    ).slice(0, 20)
+  }, [customerSearch, showCustomerPicker])
   useEffect(() => {
     reload()
     Promise.all([pullTable('products'), pullTable('discounts'), pullTable('branches')]).then(reload)
@@ -142,6 +180,7 @@ export default function POSPage() {
     setCart([])
     setDiscountId('')
     setCustomerEmail('')
+    setSelectedCustomer(null)
     reload()
     setSalesTick((t) => t + 1)
 
@@ -429,13 +468,18 @@ export default function POSPage() {
                     {cart.map((item) => {
                       const liveProduct = products.find((p) => p.id === item.id)
                       const stock = liveProduct?.stock ?? 0
+                      const itemTotal = item.price * item.qty
                       return (
                       <div key={item.id} className="flex items-center justify-between p-2 rounded bg-zinc-900/60 border border-zinc-800">
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm truncate">{item.name}</p>
-                          <p className="text-xs text-zinc-400">{money(item.price)} · <span className={stock <= 0 ? 'text-red-400' : stock <= (item.minStock ?? 1) ? 'text-yellow-400' : 'text-green-400'}>{stock} in stock</span></p>
+                          <p className="text-xs text-zinc-400">{money(item.price)} each · <span className={stock <= 0 ? 'text-red-400' : stock <= (item.minStock ?? 1) ? 'text-yellow-400' : 'text-green-400'}>{stock} in stock</span></p>
+                          {item.qty > 1 && <p className="text-xs text-zinc-500 mt-0.5">{item.qty} × {money(item.price)} = <span className="font-bold gold-text">{money(itemTotal)}</span></p>}
                         </div>
                         <div className="flex items-center gap-2">
+                          <div className="text-right mr-1">
+                            <span className="text-sm font-bold gold-text block">{money(itemTotal)}</span>
+                          </div>
                           <button onClick={() => updateQty(item.id, -1)} className="p-1 rounded bg-zinc-800 hover:bg-zinc-700"><Minus className="h-3 w-3" /></button>
                           <span className="w-6 text-center text-sm font-bold">{item.qty}</span>
                           <button onClick={() => updateQty(item.id, 1)} className="p-1 rounded bg-zinc-800 hover:bg-zinc-700"><Plus className="h-3 w-3" /></button>
@@ -473,8 +517,26 @@ export default function POSPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs text-zinc-400 flex items-center gap-1"><Mail className="h-3 w-3" /> Customer Email</label>
-                  <input type="email" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} placeholder="receipt@example.com" className="w-full bg-zinc-950 border border-zinc-800 text-white rounded p-2 text-sm" />
+                  <label className="text-xs text-zinc-400 flex items-center gap-1"><User className="h-3 w-3" /> Customer</label>
+                  {selectedCustomer ? (
+                    <div className="flex items-center justify-between p-2 rounded bg-yellow-500/10 border border-yellow-500/30">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-white truncate">{selectedCustomer.name}</p>
+                        <p className="text-xs text-zinc-400 truncate">{selectedCustomer.phone || selectedCustomer.email || 'No contact'}</p>
+                      </div>
+                      <button onClick={() => selectCustomer(null)} className="p-1 rounded text-zinc-400 hover:text-red-400 shrink-0"><X className="h-4 w-4" /></button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Button type="button" variant="outline" onClick={() => setShowCustomerPicker(true)} className="flex-1 border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-xs">
+                        <Users className="h-3.5 w-3.5 mr-1" /> Select
+                      </Button>
+                      <Button type="button" variant="outline" onClick={() => setShowQuickAdd(true)} className="flex-1 border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-xs">
+                        <UserPlus className="h-3.5 w-3.5 mr-1" /> Quick Add
+                      </Button>
+                    </div>
+                  )}
+                  <input type="email" value={customerEmail} onChange={(e) => { setCustomerEmail(e.target.value); setSelectedCustomer(null) }} placeholder="or type email manually" className="w-full bg-zinc-950 border border-zinc-800 text-white rounded p-2 text-xs" />
                 </div>
 
                 <div className="space-y-1 text-sm text-zinc-400 border-t border-zinc-800 pt-3">
@@ -525,13 +587,18 @@ export default function POSPage() {
                     {cart.map((item) => {
                       const liveProduct = products.find((p) => p.id === item.id)
                       const stock = liveProduct?.stock ?? 0
+                      const itemTotal = item.price * item.qty
                       return (
                       <div key={item.id} className="flex items-center justify-between p-2 rounded bg-zinc-950/60 border border-zinc-800">
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm truncate text-white">{item.name}</p>
-                          <p className="text-xs text-zinc-400">{money(item.price)} · <span className={stock <= 0 ? 'text-red-400' : stock <= (item.minStock ?? 1) ? 'text-yellow-400' : 'text-green-400'}>{stock} in stock</span></p>
+                          <p className="text-xs text-zinc-400">{money(item.price)} each · <span className={stock <= 0 ? 'text-red-400' : stock <= (item.minStock ?? 1) ? 'text-yellow-400' : 'text-green-400'}>{stock} in stock</span></p>
+                          {item.qty > 1 && <p className="text-xs text-zinc-500 mt-0.5">{item.qty} × {money(item.price)} = <span className="font-bold gold-text">{money(itemTotal)}</span></p>}
                         </div>
                         <div className="flex items-center gap-2">
+                          <div className="text-right mr-1">
+                            <span className="text-sm font-bold gold-text block">{money(itemTotal)}</span>
+                          </div>
                           <button onClick={() => updateQty(item.id, -1)} className="p-1 rounded bg-zinc-800 hover:bg-zinc-700"><Minus className="h-3 w-3" /></button>
                           <span className="w-6 text-center text-sm font-bold text-white">{item.qty}</span>
                           <button onClick={() => updateQty(item.id, 1)} className="p-1 rounded bg-zinc-800 hover:bg-zinc-700"><Plus className="h-3 w-3" /></button>
@@ -607,6 +674,73 @@ export default function POSPage() {
                     </div>
                   </div>
                 ))}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Customer Picker Modal */}
+        {showCustomerPicker && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+            <Card className="w-full max-w-md bg-zinc-900 border-zinc-700 max-h-[80vh] flex flex-col">
+              <CardHeader className="flex flex-row items-center justify-between border-b border-zinc-800">
+                <CardTitle className="text-white flex items-center gap-2"><Users className="h-5 w-5 text-yellow-500" /> Select Customer</CardTitle>
+                <button onClick={() => setShowCustomerPicker(false)} className="text-zinc-400 hover:text-white"><X className="h-5 w-5" /></button>
+              </CardHeader>
+              <CardContent className="p-4 space-y-3 flex-1 overflow-y-auto">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-zinc-500" />
+                  <Input value={customerSearch} onChange={(e) => setCustomerSearch(e.target.value)} placeholder="Search by name, phone, email..." className="pl-9 bg-zinc-950 border-zinc-800 text-white" autoFocus />
+                </div>
+                <div className="space-y-1">
+                  {filteredCustomers.length === 0 && <p className="text-zinc-500 text-sm text-center py-4">No customers found</p>}
+                  {filteredCustomers.map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => selectCustomer(c)}
+                      className="w-full text-left p-3 rounded-lg bg-zinc-800/60 border border-zinc-700 hover:border-yellow-500/40 hover:bg-yellow-500/5 transition-colors"
+                    >
+                      <p className="text-sm font-medium text-white">{c.name}</p>
+                      <div className="flex items-center gap-3 text-xs text-zinc-400 mt-0.5">
+                        {c.phone && <span>{c.phone}</span>}
+                        {c.email && <span>{c.email}</span>}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                <Button type="button" onClick={() => { setShowCustomerPicker(false); setShowQuickAdd(true) }} className="w-full gold-gradient text-black font-bold">
+                  <UserPlus className="h-4 w-4 mr-2" /> Add New Customer
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Quick Add Customer Modal */}
+        {showQuickAdd && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+            <Card className="w-full max-w-md bg-zinc-900 border-zinc-700">
+              <CardHeader className="flex flex-row items-center justify-between border-b border-zinc-800">
+                <CardTitle className="text-white flex items-center gap-2"><UserPlus className="h-5 w-5 text-yellow-500" /> Quick Add Customer</CardTitle>
+                <button onClick={() => setShowQuickAdd(false)} className="text-zinc-400 hover:text-white"><X className="h-5 w-5" /></button>
+              </CardHeader>
+              <CardContent className="p-4 space-y-3">
+                <div className="space-y-1">
+                  <label className="text-xs text-zinc-400">Name *</label>
+                  <input value={quickAddForm.name} onChange={(e) => setQuickAddForm({ ...quickAddForm, name: e.target.value })} placeholder="Customer name" className="w-full bg-zinc-950 border border-zinc-800 text-white rounded p-2 text-sm" autoFocus />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-zinc-400">Phone</label>
+                  <input value={quickAddForm.phone} onChange={(e) => setQuickAddForm({ ...quickAddForm, phone: e.target.value })} placeholder="Phone number" className="w-full bg-zinc-950 border border-zinc-800 text-white rounded p-2 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-zinc-400">Email</label>
+                  <input type="email" value={quickAddForm.email} onChange={(e) => setQuickAddForm({ ...quickAddForm, email: e.target.value })} placeholder="Email (for receipts)" className="w-full bg-zinc-950 border border-zinc-800 text-white rounded p-2 text-sm" />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button type="button" onClick={() => setShowQuickAdd(false)} variant="outline" className="flex-1 border-zinc-700 text-zinc-300">Cancel</Button>
+                  <Button type="button" onClick={quickAddCustomer} className="flex-1 gold-gradient text-black font-bold">Add & Select</Button>
+                </div>
               </CardContent>
             </Card>
           </div>
