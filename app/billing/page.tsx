@@ -5,63 +5,25 @@ import { AuthGuard } from '@/components/auth-guard'
 import { DashboardLayout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { getSubscriptionInfo, SubscriptionInfo, PLAN_PRICE_GHS, PlanKey } from '@/lib/subscription'
-import { getStoreId } from '@/lib/auth'
-import { CheckCircle2, Clock, CreditCard, Smartphone, ShieldCheck } from 'lucide-react'
-
-const PAY_PARTNERS: { code: 'MTNGH' | 'TCELGH' | 'ATGH'; label: string }[] = [
-  { code: 'MTNGH', label: 'MTN Mobile Money' },
-  { code: 'TCELGH', label: 'Telecel Cash' },
-  { code: 'ATGH', label: 'AirtelTigo Money' },
-]
+import { CheckCircle2, Clock, Smartphone, Copy, Info } from 'lucide-react'
 
 export default function BillingPage() {
   const [info, setInfo] = useState<SubscriptionInfo | null>(null)
   const [plan, setPlan] = useState<PlanKey>('pro')
-  const [paypartnerCode, setPaypartnerCode] = useState<'MTNGH' | 'TCELGH' | 'ATGH'>('MTNGH')
-  const [msisdn, setMsisdn] = useState('')
-  const [paying, setPaying] = useState(false)
-  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     getSubscriptionInfo().then(setInfo)
   }, [])
 
-  async function handlePay() {
-    setResult(null)
-    const storeId = getStoreId()
-    if (!storeId) {
-      setResult({ ok: false, message: 'No store found for this account. Please log in again.' })
-      return
-    }
-    if (!msisdn.trim()) {
-      setResult({ ok: false, message: 'Enter the mobile money number to charge.' })
-      return
-    }
+  const MOMO_NUMBER = '0244 647 510'
+  const MOMO_NAME = 'Emmanuel Adu Larbi'
 
-    setPaying(true)
-    try {
-      const res = await fetch('/api/payments/eganow/initiate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storeId, plan, paypartnerCode, msisdn: msisdn.trim() }),
-      })
-      const data = await res.json()
-      if (!res.ok || data.error) {
-        setResult({ ok: false, message: data.error || 'Payment could not be started.' })
-      } else {
-        setResult({
-          ok: true,
-          message: 'Payment request sent — approve the prompt on your phone to complete payment. Your access will update automatically once confirmed.',
-        })
-      }
-    } catch (err: any) {
-      setResult({ ok: false, message: err.message || 'Network error while starting payment.' })
-    } finally {
-      setPaying(false)
-    }
+  function copyNumber() {
+    navigator.clipboard.writeText(MOMO_NUMBER.replace(/\s/g, ''))
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   return (
@@ -121,46 +83,56 @@ export default function BillingPage() {
                 <Smartphone className="h-5 w-5 text-yellow-500" /> Pay with Mobile Money
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                {PAY_PARTNERS.map((p) => (
-                  <Button
-                    key={p.code}
-                    variant={paypartnerCode === p.code ? 'default' : 'outline'}
-                    className={paypartnerCode === p.code ? 'gold-gradient text-black' : 'border-zinc-700 text-zinc-300'}
-                    onClick={() => setPaypartnerCode(p.code)}
-                  >
-                    {p.label}
+            <CardContent className="space-y-5">
+              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-zinc-500">Send money to</p>
+                    <p className="text-lg font-bold text-white">{MOMO_NAME}</p>
+                  </div>
+                  <Button variant="outline" size="sm" className="border-zinc-700 text-zinc-300" onClick={copyNumber}>
+                    {copied ? <CheckCircle2 className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
+                    {copied ? 'Copied' : 'Copy'}
                   </Button>
-                ))}
+                </div>
+                <div className="flex items-center gap-2 bg-black/40 rounded-md px-3 py-2">
+                  <Smartphone className="h-4 w-4 text-yellow-500" />
+                  <span className="text-xl font-bold gold-text tracking-wide">{MOMO_NUMBER}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-zinc-500">Amount</span>
+                  <span className="text-white font-bold">GHS {PLAN_PRICE_GHS[plan]}</span>
+                </div>
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-zinc-500">Mobile Money Number</Label>
-                <Input
-                  placeholder="0244xxxxxx"
-                  value={msisdn}
-                  onChange={(e) => setMsisdn(e.target.value)}
-                  className="bg-zinc-900 border-zinc-700 text-white"
-                />
+
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Info className="h-4 w-4 text-yellow-500" />
+                  <p className="text-sm font-medium text-yellow-400">Payment Instructions</p>
+                </div>
+                <ol className="text-xs text-zinc-300 space-y-1.5 list-decimal list-inside">
+                  <li>Dial <span className="text-white font-medium">*170#</span> (MTN), <span className="text-white font-medium">*110#</span> (Telecel), or <span className="text-white font-medium">*920#</span> (AirtelTigo) to send money.</li>
+                  <li>Enter the mobile money number above as the recipient.</li>
+                  <li>Enter the amount: <span className="text-white font-medium">GHS {PLAN_PRICE_GHS[plan]}</span>.</li>
+                  <li><strong className="text-yellow-400">Use your shop name as the reference code</strong> when prompted. This helps us identify your payment.</li>
+                  <li>Complete the payment and confirm with your PIN.</li>
+                  <li>Your subscription will be activated within a few minutes after payment is confirmed.</li>
+                </ol>
               </div>
-              <Button className="gold-gradient text-black w-full" onClick={handlePay} disabled={paying}>
-                {paying ? 'Processing…' : `Pay GHS ${PLAN_PRICE_GHS[plan]} Now`}
-              </Button>
-              {result && (
-                <p className={`text-sm ${result.ok ? 'text-green-400' : 'text-red-400'}`}>{result.message}</p>
-              )}
-              <p className="text-xs text-zinc-500 flex items-center gap-1">
-                <ShieldCheck className="h-3.5 w-3.5" /> Payments are processed securely via Eganow.
+
+              <p className="text-xs text-zinc-500">
+                After sending the payment, your subscription will be manually confirmed and activated. You will
+                receive a notification once your plan is active. If you have any issues, contact support.
               </p>
             </CardContent>
           </Card>
 
           <Card className="glass-card border-dashed border-zinc-700">
             <CardContent className="p-5 flex items-start gap-3">
-              <CreditCard className="h-5 w-5 text-zinc-500 mt-0.5" />
+              <Clock className="h-5 w-5 text-zinc-500 mt-0.5" />
               <p className="text-xs text-zinc-500">
-                Card payments and automatic monthly renewal are not yet enabled. Renew manually each month using
-                Mobile Money above — you&apos;ll get a reminder banner a few days before your plan expires.
+                Automatic monthly renewal is not yet enabled. Renew manually each month using Mobile Money above —
+                you&apos;ll get a reminder banner a few days before your plan expires.
               </p>
             </CardContent>
           </Card>
