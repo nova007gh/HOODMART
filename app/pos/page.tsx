@@ -336,20 +336,22 @@ export default function POSPage() {
 
   const printReceipt = () => {
     if (!receipt) return
-    // Print directly from this page — no new tab. The @media print CSS
-    // hides everything except .print-receipt-content when body.printing
-    // is set. This avoids the page refresh / logout bug that happened
-    // when window.open() loaded the receipt in a new tab.
     document.body.classList.add('printing')
-    window.print()
-    // Clean up after the print dialog closes
-    const cleanup = () => {
-      document.body.classList.remove('printing')
-      window.removeEventListener('afterprint', cleanup)
-    }
-    window.addEventListener('afterprint', cleanup)
-    // Fallback cleanup in case afterprint doesn't fire
-    setTimeout(() => document.body.classList.remove('printing'), 1000)
+    // Small delay to ensure the 'printing' class is applied before print dialog opens
+    setTimeout(() => {
+      window.print()
+      // Clean up after the print dialog closes
+      const cleanup = () => {
+        document.body.classList.remove('printing')
+        window.removeEventListener('afterprint', cleanup)
+      }
+      window.addEventListener('afterprint', cleanup)
+      // Fallback cleanup in case afterprint doesn't fire (some browsers)
+      setTimeout(() => {
+        document.body.classList.remove('printing')
+        window.removeEventListener('afterprint', cleanup)
+      }, 5000)
+    }, 100)
   }
 
   return (
