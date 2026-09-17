@@ -27,9 +27,10 @@ export default function BranchesPage() {
 
   const reload = () => { setBranches(store.getBranches()); setSales(store.getSales()) }
 
-  // Pull from server-side sync API so branch stats reflect all live sales
+  // Pull from server-side sync API so branch stats reflect live sales
   const pullFromServer = async () => {
-    const data = await pullTable('sales')
+    const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    const data = await pullTable('sales', { from })
     if (data) reload()
   }
 

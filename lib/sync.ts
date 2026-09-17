@@ -87,9 +87,9 @@ async function runRemote(table: string, payload: any, op: SyncOp) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ table, payload: stamp(payload), op }),
     })
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}))
-      throw new Error(err.error || `Push failed: ${res.status}`)
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok || data.error) {
+      throw new Error(data.error || `Push failed: ${res.status}`)
     }
   } catch (e) {
     // Fall back to direct Supabase client (may fail due to RLS)
@@ -179,8 +179,9 @@ export async function pullRemote(): Promise<void> {
 }
 
 export async function syncNow(): Promise<void> {
+  // Only flush pending changes. Full-table pulls are now done per-page
+  // so we don't burn egress (and Vercel quota) on login.
   await flushPending()
-  await pullRemote()
 }
 
 export function startSyncListeners(callbacks?: { onOnline?: () => void; onOffline?: () => void }) {

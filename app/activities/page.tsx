@@ -18,8 +18,7 @@ export default function ActivitiesPage() {
   useEffect(() => {
     const load = () => { setActivities(store.getActivities()); setProducts(store.getProducts()) }
     load()
-    // Use pullTable directly (not rate-limited) to get all 2824 activities
-    Promise.all([pullTable('activities'), pullTable('products')]).then(load)
+    Promise.all([pullTable('activities', { limit: 500 }), pullTable('products')]).then(load)
   }, [])
 
   const productMap = useMemo(() => new Map(products.map((p) => [p.id, p])), [products])

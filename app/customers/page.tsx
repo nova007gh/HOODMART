@@ -25,7 +25,8 @@ export default function CustomersPage() {
   }
   useEffect(() => {
     reload()
-    Promise.all([pullTable('customers'), pullTable('sales')]).then(reload)
+    const from = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    Promise.all([pullTable('customers'), pullTable('sales', { from, limit: 1000 })]).then(reload)
   }, [])
 
   // Calculate real purchase stats from sales data

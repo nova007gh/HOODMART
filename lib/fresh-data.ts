@@ -1,6 +1,6 @@
 /**
  * Shared data sync utility.
- * Pulls all store data from the server-side /api/sync endpoint (bypasses RLS)
+ * Pulls store data from the server-side /api/sync endpoint (bypasses RLS)
  * and writes it to localStorage so store.getX() calls return fresh data.
  *
  * This is the single source of truth for data freshness across the app.
@@ -30,13 +30,20 @@ const TABLE_KEYS: Record<string, string> = {
   quotations: 'hoodmart_v2_quotations',
 }
 
+export interface PullOptions {
+  all?: boolean
+  limit?: number
+  from?: string
+  to?: string
+}
+
 /**
  * Merge local-only fields (like avatar) that may not exist in Supabase yet.
  * When the server returns employees without an avatar column, we preserve
  * the avatar from localStorage so profile pictures don't disappear.
  *
  * For products: if a local product has a newer updated_at than the server
- * version, keep the local copy (the user just edited it and the push may
+ * version, we keep the local copy (the user just edited it and the push may
  * not have completed yet, or the server data is stale).
  */
 function mergeLocalFields(table: string, serverData: any[]): any[] {
@@ -89,11 +96,17 @@ function mergeLocalFields(table: string, serverData: any[]): any[] {
   }
 }
 
-function buildUrl(table?: string): string {
+function buildUrl(table?: string, opts?: PullOptions): string {
   const storeId = getStoreId()
   const params = new URLSearchParams()
   if (table) params.set('table', table)
   if (storeId) params.set('store_id', storeId)
+  if (opts) {
+    if (opts.all) params.set('all', '1')
+    if (opts.limit) params.set('limit', String(opts.limit))
+    if (opts.from) params.set('from', opts.from)
+    if (opts.to) params.set('to', opts.to)
+  }
   const qs = params.toString()
   return qs ? `/api/sync?${qs}` : '/api/sync'
 }
@@ -144,9 +157,9 @@ export async function ensureFreshData(): Promise<void> {
  * Pull a single table from the server-side sync API.
  * Use this when a page only needs one table (e.g. just sales).
  */
-export async function pullTable(table: string): Promise<any[] | null> {
+export async function pullTable(table: string, opts?: PullOptions): Promise<any[] | null> {
   try {
-    const res = await fetch(buildUrl(table))
+    const res = await fetch(buildUrl(table, opts))
     if (res.ok) {
       const json = await res.json()
       if (json.data?.[table] && Array.isArray(json.data[table])) {

@@ -23,12 +23,13 @@ export default function ReportsPage() {
 
   const loadData = () => { setSales([...store.getSales()]); setProducts([...store.getProducts()]) }
 
-  // Pull from the server-side sync API (bypasses RLS) so the reports
-  // page sees all sales from all cashier terminals, not just cached data.
+  // Pull the selected date range from the server-side sync API (bypasses RLS)
+  // so the reports page sees all sales from all cashier terminals, not just cached data.
   const pullFromServer = async () => {
     setRefreshing(true)
     try {
-      await Promise.all([pullTable('sales'), pullTable('products')])
+      const to = end + 'T23:59:59.999Z'
+      await Promise.all([pullTable('sales', { from: start, to }), pullTable('products')])
       loadData()
     } finally {
       setRefreshing(false)
@@ -37,8 +38,11 @@ export default function ReportsPage() {
 
   useEffect(() => {
     loadData()
-    pullFromServer()
   }, [])
+
+  useEffect(() => {
+    pullFromServer()
+  }, [start, end])
 
   const today = new Date().toISOString().slice(0, 10)
 

@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react'
 import { getSession, logout as doLogout, login as doLogin, Session } from '@/lib/auth'
 import { syncNow } from '@/lib/sync'
-import { ensureFreshData } from '@/lib/fresh-data'
 import { isSupabaseConfigured } from '@/lib/supabase/client'
 
 /** useAuth() is mounted by several components on the same screen (AuthGuard,
  *  DashboardLayout, the page itself). These module-level singletons make sure we
- *  only ever run one sync at a time and don't re-sync on every navigation. */
+ *  only ever flush pending changes once and don't re-sync on every navigation.
+ *  Full-table data pulls are now done by the specific page that needs them,
+ *  so we don't burn egress on login. */
 let inFlight: Promise<void> | null = null
 let lastSyncedAt = 0
 const RESYNC_AFTER_MS = 60_000
@@ -17,9 +18,7 @@ function sharedSync(): Promise<void> {
   if (inFlight) return inFlight
   if (Date.now() - lastSyncedAt < RESYNC_AFTER_MS) return Promise.resolve()
   inFlight = (async () => {
-    // Use the shared fresh-data utility (bypasses RLS via server-side API)
-    await ensureFreshData()
-    // Also flush any pending local changes via the original sync mechanism
+    // Only flush pending local changes. Pages fetch their own data to save egress.
     try { await syncNow() } catch {}
   })()
     .catch(() => {})

@@ -41,8 +41,9 @@ export default function BranchDetailPage() {
 
   useEffect(() => {
     setBranch(store.getBranch(id)); setSales(store.getSales()); setLoading(false)
-    // Pull from server so branch detail shows all live sales
-    pullTable('sales').then(() => setSales(store.getSales()))
+    // Pull from server so branch detail shows live sales
+    const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    pullTable('sales', { from }).then(() => setSales(store.getSales()))
   }, [id])
 
   const branchSales = useMemo(() => sales.filter((s) => s.branchId === id).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()), [sales, id])

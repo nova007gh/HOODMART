@@ -130,7 +130,8 @@ export default function DashboardPage() {
   const pullAndReload = async () => {
     setSyncing(true)
     try {
-      await Promise.all([pullTable('sales'), pullTable('products')])
+      const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+      await Promise.all([pullTable('sales', { from }), pullTable('products')])
       reload()
       setLastSynced(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
     } catch {
@@ -142,19 +143,13 @@ export default function DashboardPage() {
 
   useEffect(() => {
     reload()
-    // Pull from server immediately on mount so the admin sees the latest
-    // sales from all cashier terminals right away.
-    pullAndReload()
     // Refresh from local storage every 5s for instant updates on same-device sales.
     const interval = setInterval(reload, 5000)
-    // Pull from server every 15s so sales from other devices appear quickly.
-    const remoteInterval = setInterval(pullAndReload, 15000)
     // Also listen for cross-tab storage changes (sales made on other tabs)
     const onStorage = () => reload()
     window.addEventListener('storage', onStorage)
     return () => {
       clearInterval(interval)
-      clearInterval(remoteInterval)
       window.removeEventListener('storage', onStorage)
     }
   }, [])

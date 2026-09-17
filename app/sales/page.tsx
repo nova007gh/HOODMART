@@ -143,14 +143,15 @@ export default function SalesPage() {
   // Pull from server-side sync API (bypasses RLS) so the admin sees
   // sales from all cashier terminals, not just this device.
   const pullFromServer = async () => {
-    const data = await pullTable('sales')
+    const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    const data = await pullTable('sales', { from })
     if (data) loadSales()
   }
 
   useEffect(() => {
     loadSales()
     pullFromServer()
-    const interval = setInterval(() => { loadSales(); pullFromServer() }, 15000)
+    const interval = setInterval(() => { loadSales(); pullFromServer() }, 120000)
     return () => clearInterval(interval)
   }, [])
 

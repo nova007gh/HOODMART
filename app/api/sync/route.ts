@@ -6,10 +6,14 @@ export const dynamic = 'force-dynamic'
 
 /**
  * Server-side sync endpoint.
- * Uses the service role key to bypass RLS and pull all store data.
- * The browser client (anon key) can't read from Supabase because RLS
- * is enabled with no permissive policies. This endpoint acts as a
- * proxy so the admin dashboard can see live sales from all cashiers.
+ * Uses the service role key to bypass RLS and pull store data.
+ *
+ * Query params:
+ *   - table: sync a single table only
+ *   - store_id: filter by store
+ *   - all: "1" or "true" disables default caps
+ *   - limit: override per-table cap
+ *   - from / to: ISO dates to filter on updated_at
  */
 export async function GET(request: Request) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -21,12 +25,29 @@ export async function GET(request: Request) {
 
   const supabase = createClient(url, serviceKey, { auth: { persistSession: false } })
 
-  // Get store_id from query param, cookie, or default to the known store.
-  // The client passes store_id as a query param from the session.
   const { searchParams } = new URL(request.url)
   const cookieStoreId = request.headers.get('x-store-id')
   const storeId = searchParams.get('store_id') || cookieStoreId || 'f4c6ecf8-9956-4dfd-9404-b9b81cae5c4d'
-  const table = searchParams.get('table') // optional: fetch only one table
+  const table = searchParams.get('table')
+  const from = searchParams.get('from')
+  const to = searchParams.get('to')
+  const limitParam = searchParams.get('limit')
+  const all =
+    searchParams.get('all') === '1' ||
+    searchParams.get('all') === 'true'
+
+  let requestedLimit: number | undefined
+  if (limitParam) {
+    const n = parseInt(limitParam, 10)
+    if (!Number.isNaN(n) && n > 0) requestedLimit = n
+  }
+
+  // Default caps for high-volume tables. Prevents Vercel egress from
+  // ballooning when a page pulls all sales/activities.
+  const DEFAULT_LIMITS: Record<string, number> = {
+    sales: 1000,
+    activities: 500,
+  }
 
   const tables = table
     ? [table]
@@ -41,20 +62,39 @@ export async function GET(request: Request) {
 
   for (const t of tables) {
     try {
+      const targetLimit = all
+        ? Infinity
+        : (requestedLimit ?? DEFAULT_LIMITS[t] ?? Infinity)
+
+      // Apply optional date window on updated_at
+      const applyFilters = (q: any) => {
+        let query = q
+        if (storeId) query = query.eq('store_id', storeId)
+        if (from) query = query.gte('updated_at', from)
+        if (to) query = query.lte('updated_at', to)
+        return query
+      }
+
       if (PAGINATED.has(t)) {
         const allRows: any[] = []
         let offset = 0
         const pageSize = 1000
-        // Fetch pages until we get less than a full page
-        while (true) {
-          let query = supabase.from(t).select('*').order('updated_at', { ascending: false }).range(offset, offset + pageSize - 1)
-          if (storeId) query = query.eq('store_id', storeId)
+
+        while (allRows.length < targetLimit) {
+          const remaining = targetLimit - allRows.length
+          const thisPage = Math.min(pageSize, remaining)
+          let query = supabase
+            .from(t)
+            .select('*')
+            .order('updated_at', { ascending: false })
+            .range(offset, offset + thisPage - 1)
+          query = applyFilters(query)
           const { data, error } = await query
           if (error) { errors.push(`${t}: ${error.message}`); break }
           if (Array.isArray(data) && data.length > 0) {
             allRows.push(...data)
-            if (data.length < pageSize) break
-            offset += pageSize
+            if (data.length < thisPage) break
+            offset += thisPage
           } else {
             break
           }
@@ -62,7 +102,12 @@ export async function GET(request: Request) {
         result[t] = allRows
       } else {
         let query = supabase.from(t).select('*')
-        if (storeId) query = query.eq('store_id', storeId)
+        query = applyFilters(query)
+        if (Number.isFinite(targetLimit)) {
+          query = query
+            .order('updated_at', { ascending: false })
+            .limit(targetLimit)
+        }
         const { data, error } = await query
         if (error) {
           errors.push(`${t}: ${error.message}`)
