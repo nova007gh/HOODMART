@@ -1,4 +1,5 @@
 import * as sync from './sync'
+import { notifications } from './notifications'
 
 export interface Product {
   id: string
@@ -236,14 +237,29 @@ export const store = {
     products.push(product)
     store.setProducts(products)
     sync.pushLocalChange('products', product)
+    notifications.push('product', 'New product added', `${product.name} — ${money(product.price)}`, { href: '/pos' })
   },
   updateProduct: (id: string, p: Partial<Product>) => {
     const products = store.getProducts()
     const idx = products.findIndex((x) => x.id === id)
     if (idx >= 0) {
-      products[idx] = { ...products[idx], ...p, updated_at: new Date().toISOString() }
+      const before = products[idx]
+      products[idx] = { ...before, ...p, updated_at: new Date().toISOString() }
       store.setProducts(products)
       sync.pushLocalChange('products', products[idx])
+
+      // Notify other devices what changed — cashiers pull notifications
+      // every 30s and refresh products via incremental sync.
+      const changes: string[] = []
+      if (p.price !== undefined && p.price !== before.price) changes.push(`price ${money(before.price)} → ${money(p.price)}`)
+      if (p.cost !== undefined && p.cost !== before.cost) changes.push(`cost ${money(before.cost ?? 0)} → ${money(p.cost)}`)
+      if (p.stock !== undefined && p.stock !== before.stock) {
+        const diff = (p.stock ?? 0) - (before.stock ?? 0)
+        changes.push(`stock ${before.stock ?? 0} → ${p.stock} (${diff >= 0 ? '+' : ''}${diff})`)
+      }
+      if (p.name !== undefined && p.name !== before.name) changes.push(`renamed from ${before.name}`)
+      if (p.minStock !== undefined && p.minStock !== before.minStock) changes.push(`min stock ${p.minStock}`)
+      notifications.push('product', `${products[idx].name} updated`, changes.length ? changes.join(' · ') : 'details updated', { href: '/inventory' })
     }
   },
   deleteProduct: (id: string) => {
