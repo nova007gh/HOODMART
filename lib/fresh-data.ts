@@ -153,26 +153,129 @@ export async function ensureFreshData(): Promise<void> {
   return inFlight
 }
 
+// ---------------------------------------------------------------------------
+// Incremental sync — keeps egress low on Supabase's free tier.
+//
+//   pullTable('products')        → first call fetches everything once, then
+//                                  only rows updated since the last pull.
+//                                  A full re-pull happens every 6h to catch
+//                                  hard-deleted rows.
+//   pullTable('sales', {from})   → explicit window query (dashboard, reports).
+//
+// Plus a 15s per-table throttle so rapid page navigation doesn't refetch.
+// ---------------------------------------------------------------------------
+
+const LAST_PULL_PREFIX = 'hoodmart_last_pull_'
+const LAST_SYNC_PREFIX = 'hoodmart_last_synced_'
+const LAST_FULL_PREFIX = 'hoodmart_last_full_pull_'
+const MIN_PULL_INTERVAL_MS = 15_000
+const FULL_PULL_AFTER_MS = 6 * 60 * 60 * 1000
+
+// Keep the newest N rows per table in localStorage so merged data doesn't
+// grow unbounded over weeks of incremental syncs.
+const MERGE_CAPS: Record<string, number> = {
+  sales: 3000,
+  activities: 500,
+}
+
+function readLS<T>(key: string, def: T): T {
+  if (typeof window === 'undefined') return def
+  try {
+    const raw = localStorage.getItem(key)
+    return raw ? JSON.parse(raw) : def
+  } catch {
+    return def
+  }
+}
+
+function writeLS(key: string, value: any) {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+  } catch { /* quota — ignore */ }
+}
+
+/**
+ * Merge incoming server rows into the local array by id. Rows the server
+ * didn't send (older data, hard-deleted elsewhere) are kept until the next
+ * periodic full pull cleans them up.
+ */
+function mergeRows(table: string, local: any[], incoming: any[]): any[] {
+  const incomingById = new Map<string, any>()
+  for (const r of incoming) if (r?.id) incomingById.set(r.id, r)
+
+  const merged = local.map((l) => {
+    const s = l?.id ? incomingById.get(l.id) : undefined
+    if (!s) return l
+    incomingById.delete(l.id)
+    if (table === 'products') {
+      const lt = l.updated_at ? new Date(l.updated_at).getTime() : 0
+      const st = s.updated_at ? new Date(s.updated_at).getTime() : 0
+      if (lt > st && Date.now() - lt < 60_000) return l
+    }
+    if (table === 'employees' && !s.avatar && l.avatar) return { ...s, avatar: l.avatar }
+    return s
+  })
+
+  incomingById.forEach((s) => merged.push(s))
+
+  const cap = MERGE_CAPS[table]
+  if (cap && merged.length > cap) {
+    merged.sort((a, b) => {
+      const at = new Date(a?.updated_at || a?.timestamp || a?.date || 0).getTime() || 0
+      const bt = new Date(b?.updated_at || b?.timestamp || b?.date || 0).getTime() || 0
+      return bt - at
+    })
+    return merged.slice(0, cap)
+  }
+  return merged
+}
+
 /**
  * Pull a single table from the server-side sync API.
  * Use this when a page only needs one table (e.g. just sales).
  */
 export async function pullTable(table: string, opts?: PullOptions): Promise<any[] | null> {
+  const key = TABLE_KEYS[table]
   try {
-    const res = await fetch(buildUrl(table, opts))
-    if (res.ok) {
-      const json = await res.json()
-      if (json.data?.[table] && Array.isArray(json.data[table])) {
-        const key = TABLE_KEYS[table]
-        const merged = mergeLocalFields(table, json.data[table])
-        if (key) {
-          try {
-            localStorage.setItem(key, JSON.stringify(merged))
-          } catch { /* quota — ignore */ }
-        }
-        return merged
+    const incremental = !opts
+    let fetchOpts = opts
+    let fullPull = false
+
+    if (incremental && typeof window !== 'undefined' && key) {
+      const localRows = readLS<any[]>(key, [])
+      const lastFull = readLS<number>(LAST_FULL_PREFIX + table, 0)
+      const lastPull = readLS<number>(LAST_PULL_PREFIX + table, 0)
+      const lastSynced = readLS<string>(LAST_SYNC_PREFIX + table, '')
+      const needsFull = !localRows.length || !lastFull || Date.now() - lastFull > FULL_PULL_AFTER_MS
+
+      if (!needsFull && Date.now() - lastPull < MIN_PULL_INTERVAL_MS) {
+        return localRows
+      }
+      if (!needsFull && lastSynced) {
+        fetchOpts = { from: lastSynced }
+      } else {
+        fullPull = true
       }
     }
-  } catch { /* ignore */ }
-  return null
+
+    const res = await fetch(buildUrl(table, fetchOpts))
+    if (!res.ok) return null
+    const json = await res.json()
+    if (!json.data?.[table] || !Array.isArray(json.data[table])) return null
+
+    const merged = fullPull
+      ? mergeLocalFields(table, json.data[table])
+      : mergeRows(table, key ? readLS<any[]>(key, []) : [], json.data[table])
+
+    if (key) writeLS(key, merged)
+    if (typeof window !== 'undefined') {
+      writeLS(LAST_PULL_PREFIX + table, Date.now())
+      if (json.syncedAt) writeLS(LAST_SYNC_PREFIX + table, json.syncedAt)
+      if (fullPull) writeLS(LAST_FULL_PREFIX + table, Date.now())
+    }
+    return merged
+  } catch {
+    return null
+  }
 }

@@ -57,8 +57,9 @@ export async function GET(request: Request) {
   const result: Record<string, any[]> = {}
   const errors: string[] = []
 
-  // Tables that can grow beyond Supabase's 1000-row default limit.
-  const PAGINATED = new Set(['sales', 'activities'])
+  // Paginate every table — PostgREST silently caps responses at 1000 rows,
+  // which would otherwise drop products/sales beyond that limit.
+  const PAGINATED = new Set(tables)
 
   for (const t of tables) {
     try {
