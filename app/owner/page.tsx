@@ -31,6 +31,9 @@ import {
   UserPlus,
   Percent,
   RotateCcw,
+  LogIn,
+  Database,
+  ShoppingCart,
 } from 'lucide-react'
 
 interface Stats {
@@ -69,6 +72,55 @@ interface PaymentRow {
   status: string
   created_at: string
 }
+
+interface LoginRow {
+  email: string
+  lastSignInAt: string | null
+  store_id: string | null
+  storeName: string | null
+  role: string | null
+}
+
+interface SaleFeedRow {
+  id: string
+  store_id: string
+  storeName: string
+  cashier: string
+  total: number
+  timestamp: string
+}
+
+interface StoreSeries {
+  store_id: string
+  storeName: string
+  points: { key: string; total: number; count: number }[]
+}
+
+interface UsageRow {
+  store_id: string
+  storeName: string
+  products: number
+  sales: number
+  customers: number
+  employees: number
+  activities: number
+}
+
+interface ActivityData {
+  logins: LoginRow[]
+  recentSales: SaleFeedRow[]
+  salesByDay: StoreSeries[]
+  salesByWeek: StoreSeries[]
+  salesByMonth: StoreSeries[]
+  usage: UsageRow[]
+}
+
+const STORE_COLORS = [
+  'from-yellow-600 to-yellow-400',
+  'from-emerald-600 to-emerald-400',
+  'from-sky-600 to-sky-400',
+  'from-violet-600 to-violet-400',
+]
 
 const STATUS_STYLES: Record<string, string> = {
   active: 'bg-green-500/10 text-green-400 border-green-500/30',
@@ -118,6 +170,7 @@ export default function OwnerDashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [stores, setStores] = useState<StoreRow[]>([])
   const [payments, setPayments] = useState<PaymentRow[]>([])
+  const [activity, setActivity] = useState<ActivityData | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -130,10 +183,11 @@ export default function OwnerDashboardPage() {
     if (showRefresh) setRefreshing(true)
     setError(null)
     try {
-      const [statsRes, storesRes, paymentsRes] = await Promise.all([
+      const [statsRes, storesRes, paymentsRes, activityRes] = await Promise.all([
         ownerFetch('/api/owner/stats'),
         ownerFetch('/api/owner/stores'),
         ownerFetch('/api/owner/payments'),
+        ownerFetch('/api/owner/activity'),
       ])
 
       if (!statsRes.ok || !storesRes.ok || !paymentsRes.ok) {
@@ -145,6 +199,7 @@ export default function OwnerDashboardPage() {
       setStats(await statsRes.json())
       setStores((await storesRes.json()).stores)
       setPayments((await paymentsRes.json()).payments)
+      if (activityRes.ok) setActivity(await activityRes.json())
       setLastRefreshed(new Date())
     } catch (err: any) {
       setError(err.message || 'Network error while loading dashboard.')
@@ -253,6 +308,41 @@ export default function OwnerDashboardPage() {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
     return payments.filter((p) => p.status === 'failed' && new Date(p.created_at) >= thirtyDaysAgo)
   }, [payments])
+
+  // Weekly sales stacked by store (8 weeks)
+  const weeklySales = useMemo(() => {
+    const series = activity?.salesByWeek || []
+    const keys = series[0]?.points.map((p) => p.key) || []
+    const buckets = keys.map((key, i) => ({
+      key,
+      segments: series.map((s, si) => ({
+        storeName: s.storeName,
+        color: STORE_COLORS[si % STORE_COLORS.length],
+        total: s.points[i]?.total || 0,
+      })),
+      total: series.reduce((sum, s) => sum + (s.points[i]?.total || 0), 0),
+    }))
+    return { buckets, max: Math.max(1, ...buckets.map((b) => b.total)) }
+  }, [activity])
+
+  // Monthly sales per store (6 months), newest first
+  const monthlySales = useMemo(() => {
+    const series = activity?.salesByMonth || []
+    const keys = series[0]?.points.map((p) => p.key) || []
+    return keys.map((key, i) => ({
+      key,
+      label: new Date(key + '-01T00:00:00Z').toLocaleDateString(undefined, { month: 'short', year: 'numeric' }),
+      perStore: series.map((s) => ({ storeName: s.storeName, total: s.points[i]?.total || 0, count: s.points[i]?.count || 0 })),
+      total: series.reduce((sum, s) => sum + (s.points[i]?.total || 0), 0),
+    })).reverse()
+  }, [activity])
+
+  // Total rows across stores for the footprint share bars
+  const totalRows = useMemo(() => {
+    return (activity?.usage || []).reduce(
+      (s, u) => s + u.products + u.sales + u.customers + u.employees + u.activities, 0
+    )
+  }, [activity])
 
   function exportCSV() {
     const header = 'Store,Email,Plan,Status,Trial Ends,Period End,Created\n'
@@ -396,6 +486,210 @@ export default function OwnerDashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Live Activity: recent sales + sign-ins */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card className="bg-zinc-950 border-zinc-800 lg:col-span-2">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-white text-sm flex items-center gap-2">
+              <ShoppingCart className="h-4 w-4 text-emerald-400" /> Recent Sales
+              <span className="text-xs text-zinc-500 font-normal">across all stores</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="divide-y divide-zinc-900">
+              {(activity?.recentSales || []).slice(0, 12).map((s) => (
+                <div key={s.id} className="flex items-center gap-3 px-6 py-2.5 hover:bg-zinc-900/50 transition-colors">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-xs font-bold text-emerald-400">
+                    {(s.cashier?.[0] || '?').toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm text-white">{s.cashier}</p>
+                    <p className="text-xs text-zinc-500">{s.storeName}</p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="text-sm font-semibold text-yellow-400">GHS {s.total.toLocaleString()}</p>
+                    <p className="text-[11px] text-zinc-600">{s.timestamp ? timeAgo(s.timestamp) : '—'}</p>
+                  </div>
+                </div>
+              ))}
+              {!activity?.recentSales?.length && (
+                <p className="px-6 py-8 text-center text-sm text-zinc-600">No sales recorded yet.</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-zinc-950 border-zinc-800">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-white text-sm flex items-center gap-2">
+              <LogIn className="h-4 w-4 text-sky-400" /> Sign-in Activity
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="divide-y divide-zinc-900">
+              {(activity?.logins || []).map((l) => {
+                const mins = l.lastSignInAt ? (Date.now() - new Date(l.lastSignInAt).getTime()) / 60000 : Infinity
+                const online = mins < 30
+                return (
+                  <div key={l.email} className="flex items-center gap-3 px-6 py-2.5">
+                    <span className={`h-2 w-2 shrink-0 rounded-full ${online ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]' : 'bg-zinc-700'}`} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm text-white">{l.email}</p>
+                      <p className="text-xs text-zinc-500">
+                        {l.storeName || 'No store'}{l.role ? ` · ${l.role}` : ''}
+                      </p>
+                    </div>
+                    <p className="shrink-0 text-[11px] text-zinc-600">{l.lastSignInAt ? timeAgo(l.lastSignInAt) : 'never'}</p>
+                  </div>
+                )
+              })}
+              {!activity?.logins?.length && (
+                <p className="px-6 py-8 text-center text-sm text-zinc-600">No sign-ins recorded.</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Sales by Store: weekly stacked chart + monthly table */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card className="bg-zinc-950 border-zinc-800 lg:col-span-2">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-white text-sm flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-yellow-500" /> Weekly Sales by Store
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-44 flex items-end gap-2">
+              {weeklySales.buckets.map((w) => (
+                <div key={w.key} className="flex-1 flex flex-col items-center justify-end gap-1 h-full">
+                  <div
+                    className="w-full max-w-[28px] flex flex-col-reverse rounded-t overflow-hidden"
+                    style={{ height: `${Math.max(2, (w.total / weeklySales.max) * 160)}px` }}
+                    title={`GHS ${w.total.toLocaleString()}`}
+                  >
+                    {w.segments.map((seg, i) => (
+                      <div
+                        key={i}
+                        className={`w-full bg-gradient-to-t ${seg.color}`}
+                        style={{ height: `${w.total ? (seg.total / w.total) * 100 : 0}%` }}
+                        title={`${seg.storeName}: GHS ${seg.total.toLocaleString()}`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-[10px] text-zinc-600">
+                    {new Date(w.key + 'T00:00:00Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-zinc-500">
+              {(activity?.salesByWeek || []).map((s, i) => (
+                <span key={s.store_id} className="flex items-center gap-1.5">
+                  <span className={`h-2.5 w-2.5 rounded-sm bg-gradient-to-t ${STORE_COLORS[i % STORE_COLORS.length]}`} />
+                  {s.storeName}
+                </span>
+              ))}
+              <span className="ml-auto">
+                Total: <span className="text-yellow-400 font-semibold">GHS {weeklySales.buckets.reduce((s, b) => s + b.total, 0).toLocaleString()}</span>
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-zinc-950 border-zinc-800">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-white text-sm flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-violet-400" /> Monthly Sales
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="divide-y divide-zinc-900">
+              {monthlySales.map((m) => (
+                <div key={m.key} className="px-6 py-2.5">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-white">{m.label}</p>
+                    <p className="text-sm font-semibold text-yellow-400">GHS {m.total.toLocaleString()}</p>
+                  </div>
+                  {m.perStore.map((ps, i) => (
+                    <div key={i} className="mt-1 flex items-center justify-between text-[11px] text-zinc-500">
+                      <span className="flex items-center gap-1.5">
+                        <span className={`h-1.5 w-1.5 rounded-full bg-gradient-to-t ${STORE_COLORS[i % STORE_COLORS.length]}`} />
+                        {ps.storeName}
+                      </span>
+                      <span>GHS {ps.total.toLocaleString()} · {ps.count} tx</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+              {monthlySales.length === 0 && (
+                <p className="px-6 py-8 text-center text-sm text-zinc-600">No sales data yet.</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Data footprint / usage per store */}
+      <Card className="bg-zinc-950 border-zinc-800">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-white text-sm flex items-center gap-2">
+            <Database className="h-4 w-4 text-sky-400" /> Data Footprint by Store
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-zinc-500 border-b border-zinc-800">
+                  <th className="px-6 py-2 font-medium">Store</th>
+                  <th className="px-6 py-2 font-medium">Products</th>
+                  <th className="px-6 py-2 font-medium">Sales</th>
+                  <th className="px-6 py-2 font-medium">Customers</th>
+                  <th className="px-6 py-2 font-medium">Employees</th>
+                  <th className="px-6 py-2 font-medium">Activities</th>
+                  <th className="px-6 py-2 font-medium w-40">Share</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(activity?.usage || []).map((u) => {
+                  const rows = u.products + u.sales + u.customers + u.employees + u.activities
+                  const share = totalRows ? Math.round((rows / totalRows) * 100) : 0
+                  return (
+                    <tr key={u.store_id} className="border-b border-zinc-900 hover:bg-zinc-900/50">
+                      <td className="px-6 py-3">
+                        <Link href={`/owner/stores/${u.store_id}`} className="text-white hover:text-yellow-400 font-medium">
+                          {u.storeName}
+                        </Link>
+                      </td>
+                      <td className="px-6 py-3 text-zinc-300">{u.products.toLocaleString()}</td>
+                      <td className="px-6 py-3 text-zinc-300">{u.sales.toLocaleString()}</td>
+                      <td className="px-6 py-3 text-zinc-300">{u.customers.toLocaleString()}</td>
+                      <td className="px-6 py-3 text-zinc-300">{u.employees.toLocaleString()}</td>
+                      <td className="px-6 py-3 text-zinc-300">{u.activities.toLocaleString()}</td>
+                      <td className="px-6 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 flex-1 rounded-full bg-zinc-800 overflow-hidden">
+                            <div className="h-full rounded-full bg-gradient-to-r from-yellow-600 to-yellow-400" style={{ width: `${share}%` }} />
+                          </div>
+                          <span className="text-xs text-zinc-500 w-8">{share}%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+                {!activity?.usage?.length && (
+                  <tr><td colSpan={7} className="px-6 py-8 text-center text-zinc-600">No usage data.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <p className="px-6 py-3 text-[11px] text-zinc-600 border-t border-zinc-900">
+            Supabase bills egress per project, not per store — row share approximates each store's data footprint.
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Expiring Soon Alerts */}
       {expiringSoon.length > 0 && (
