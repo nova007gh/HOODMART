@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PLAN_PRICE_GHS, PlanKey } from '@/lib/subscription'
-import { ArrowLeft, Save, PlusCircle } from 'lucide-react'
+import { ArrowLeft, Save, PlusCircle, CreditCard } from 'lucide-react'
 
 interface StoreDetail {
   id: string
@@ -48,6 +48,9 @@ export default function StoreDetailPage() {
   const [status, setStatus] = useState('')
   const [plan, setPlan] = useState('')
   const [extendDays, setExtendDays] = useState('30')
+  const [payAmount, setPayAmount] = useState('')
+  const [payProvider, setPayProvider] = useState('manual')
+  const [payDays, setPayDays] = useState('30')
 
   async function load() {
     setLoading(true)
@@ -97,6 +100,32 @@ export default function StoreDetailPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Extension failed')
       setMessage(`Extended by ${extendDays} day(s).`)
+      load()
+    } catch (err: any) {
+      setMessage(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function recordPayment() {
+    setSaving(true)
+    setMessage(null)
+    try {
+      const res = await ownerFetch('/api/owner/payments', {
+        method: 'POST',
+        body: JSON.stringify({
+          store_id: params.id,
+          plan,
+          provider: payProvider,
+          amount: payAmount ? Number(payAmount) : undefined,
+          status: 'successful',
+          extend_days: Number(payDays),
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Payment recording failed')
+      setMessage(`Recorded payment and renewed ${payDays} day(s).`)
       load()
     } catch (err: any) {
       setMessage(err.message)
@@ -172,6 +201,47 @@ export default function StoreDetailPage() {
             <Button onClick={extendPeriod} disabled={saving} variant="outline" className="border-zinc-700 text-zinc-300">
               <PlusCircle className="h-4 w-4 mr-2" /> Extend
             </Button>
+          </div>
+
+          <div className="pt-4 border-t border-zinc-800 space-y-3">
+            <Label className="text-xs text-zinc-500">Record payment & renew</Label>
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-1">
+                <Label className="text-[11px] text-zinc-600">Amount (GHS)</Label>
+                <Input
+                  type="number"
+                  value={payAmount}
+                  onChange={(e) => setPayAmount(e.target.value)}
+                  placeholder={String(PLAN_PRICE_GHS[plan as PlanKey] ?? 0)}
+                  className="bg-zinc-900 border-zinc-700 text-white w-28"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] text-zinc-600">Days</Label>
+                <Input
+                  type="number"
+                  value={payDays}
+                  onChange={(e) => setPayDays(e.target.value)}
+                  className="bg-zinc-900 border-zinc-700 text-white w-24"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] text-zinc-600">Provider</Label>
+                <select
+                  value={payProvider}
+                  onChange={(e) => setPayProvider(e.target.value)}
+                  className="h-10 rounded-md border border-zinc-700 bg-zinc-900 text-white px-3 text-sm"
+                >
+                  <option value="manual">manual</option>
+                  <option value="momo">momo</option>
+                  <option value="cash">cash</option>
+                  <option value="eganow">eganow</option>
+                </select>
+              </div>
+              <Button onClick={recordPayment} disabled={saving} className="gold-gradient text-black">
+                <CreditCard className="h-4 w-4 mr-2" /> Record & Renew
+              </Button>
+            </div>
           </div>
 
           {message && <p className="text-sm text-yellow-400">{message}</p>}
