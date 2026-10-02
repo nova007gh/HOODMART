@@ -153,7 +153,7 @@ export default function StoreDetailPage() {
           <CardTitle className="text-white text-base">Subscription Overrides</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label className="text-xs text-zinc-500">Status</Label>
               <select
@@ -260,6 +260,7 @@ export default function StoreDetailPage() {
           <CardTitle className="text-white text-base">Payment History</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-zinc-500 border-b border-zinc-800">
@@ -291,6 +292,7 @@ export default function StoreDetailPage() {
               )}
             </tbody>
           </table>
+          </div>
         </CardContent>
       </Card>
     </div>

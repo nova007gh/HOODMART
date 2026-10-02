@@ -438,7 +438,7 @@ export default function OwnerDashboardPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Platform Overview</h1>
           <p className="text-zinc-500 text-sm">
@@ -446,7 +446,7 @@ export default function OwnerDashboardPage() {
             {lastRefreshed && <span className="ml-2 text-zinc-600">Updated {timeAgo(lastRefreshed.toISOString())}</span>}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             size="sm"
             className="gold-gradient text-black font-semibold"
@@ -524,7 +524,7 @@ export default function OwnerDashboardPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
         <StatCard icon={Building2} label="Total Stores" value={stats?.totalStores ?? 0} />
         <StatCard icon={Wallet} label="Est. MRR" value={`GHS ${(stats?.mrr ?? 0).toLocaleString()}`} accent="text-green-400" />
         <StatCard icon={CheckCircle2} label="Active" value={stats?.active ?? 0} accent="text-green-400" />
@@ -753,7 +753,7 @@ export default function OwnerDashboardPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-zinc-500 border-b border-zinc-800">
@@ -799,6 +799,36 @@ export default function OwnerDashboardPage() {
               </tbody>
             </table>
           </div>
+          <div className="md:hidden divide-y divide-zinc-900">
+            {(activity?.usage || []).map((u) => {
+              const rows = u.products + u.sales + u.customers + u.employees + u.activities
+              const share = totalRows ? Math.round((rows / totalRows) * 100) : 0
+              return (
+                <div key={u.store_id} className="px-4 py-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Link href={`/owner/stores/${u.store_id}`} className="text-sm font-medium text-white hover:text-yellow-400">
+                      {u.storeName}
+                    </Link>
+                    <span className="text-xs text-zinc-500">{share}% of data</span>
+                  </div>
+                  <div className="grid grid-cols-5 gap-1 text-center">
+                    {[['Products', u.products], ['Sales', u.sales], ['Cust.', u.customers], ['Staff', u.employees], ['Events', u.activities]].map(([l, v]) => (
+                      <div key={l as string}>
+                        <p className="text-sm font-semibold text-zinc-200">{(v as number).toLocaleString()}</p>
+                        <p className="text-[10px] text-zinc-600">{l}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+                    <div className="h-full rounded-full bg-gradient-to-r from-yellow-600 to-yellow-400" style={{ width: `${share}%` }} />
+                  </div>
+                </div>
+              )
+            })}
+            {!activity?.usage?.length && (
+              <p className="px-4 py-8 text-center text-sm text-zinc-600">No usage data.</p>
+            )}
+          </div>
           <p className="px-6 py-3 text-[11px] text-zinc-600 border-t border-zinc-900">
             Supabase bills egress per project, not per store — row share approximates each store's data footprint.
           </p>
@@ -815,7 +845,7 @@ export default function OwnerDashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-zinc-500 border-b border-zinc-800">
@@ -856,6 +886,32 @@ export default function OwnerDashboardPage() {
                 </tbody>
               </table>
             </div>
+            <div className="md:hidden divide-y divide-zinc-900">
+              {expiringSoon.map((s) => (
+                <div key={s.id} className="px-4 py-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <Link href={`/owner/stores/${s.id}`} className="truncate text-sm font-medium text-white hover:text-yellow-400">
+                      {s.name}
+                    </Link>
+                    <StatusBadge status={s.subscription_status} />
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-zinc-500">
+                    <span className="capitalize truncate">{s.plan} · ends {s.endDate ? new Date(s.endDate).toLocaleDateString() : '—'}</span>
+                    <span
+                      className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${
+                        (s.daysRemaining ?? 0) <= 0
+                          ? 'bg-red-500/20 text-red-400 animate-pulse'
+                          : (s.daysRemaining ?? 0) <= 1
+                          ? 'bg-orange-500/20 text-orange-400'
+                          : 'bg-yellow-500/20 text-yellow-400'
+                      }`}
+                    >
+                      {daysLabel(s.daysRemaining)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}
@@ -870,7 +926,7 @@ export default function OwnerDashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-zinc-500 border-b border-zinc-800">
@@ -893,6 +949,17 @@ export default function OwnerDashboardPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+            <div className="md:hidden divide-y divide-zinc-900">
+              {recentFailedPayments.slice(0, 10).map((p) => (
+                <div key={p.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm text-white">{p.storeName}</p>
+                    <p className="text-xs text-zinc-500 capitalize">{p.plan} · {p.provider} · {timeAgo(p.created_at)}</p>
+                  </div>
+                  <p className="shrink-0 text-sm font-semibold text-red-400">{p.currency} {p.amount}</p>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -933,7 +1000,7 @@ export default function OwnerDashboardPage() {
           </div>
         </div>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-zinc-500 border-b border-zinc-800">
@@ -1032,6 +1099,79 @@ export default function OwnerDashboardPage() {
               </tbody>
             </table>
           </div>
+          <div className="md:hidden divide-y divide-zinc-900">
+            {enrichedStores.map((s) => (
+              <div key={s.id} className="px-4 py-3 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <HealthDot health={s.health} />
+                    <div className="min-w-0">
+                      <Link href={`/owner/stores/${s.id}`} className="block truncate text-sm font-medium text-white hover:text-yellow-400">
+                        {s.name}
+                      </Link>
+                      <p className="truncate text-xs text-zinc-500">{s.owner_email}</p>
+                    </div>
+                  </div>
+                  <StatusBadge status={s.subscription_status} />
+                </div>
+                <div className="flex items-center justify-between gap-2 text-xs text-zinc-500">
+                  <span className="capitalize">
+                    {s.plan} · {s.subscription_provider || '—'}
+                    {(s.subscription_status === 'trialing' ? s.trial_ends_at : s.current_period_end) &&
+                      ` · ends ${new Date((s.subscription_status === 'trialing' ? s.trial_ends_at : s.current_period_end) as string).toLocaleDateString()}`}
+                  </span>
+                  {s.daysRemaining !== null && (
+                    <span
+                      className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                        s.daysRemaining <= 0
+                          ? 'bg-red-500/20 text-red-400 animate-pulse'
+                          : s.daysRemaining <= 3
+                          ? 'bg-orange-500/20 text-orange-400'
+                          : s.daysRemaining <= 7
+                          ? 'bg-yellow-500/20 text-yellow-400'
+                          : 'bg-green-500/20 text-green-400'
+                      }`}
+                    >
+                      {daysLabel(s.daysRemaining)}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-zinc-600">
+                    {s.lastActiveAt ? `Active ${timeAgo(s.lastActiveAt)}` : 'No activity'}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      title="Extend access"
+                      onClick={() => setExtendTarget(s)}
+                      className="rounded-md border border-zinc-800 p-1.5 text-zinc-400 transition-colors hover:border-amber-500/40 hover:text-amber-400"
+                    >
+                      <CalendarClock className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      title="Record payment & renew"
+                      onClick={() => setRenewTarget(s)}
+                      className="rounded-md border border-zinc-800 p-1.5 text-zinc-400 transition-colors hover:border-emerald-500/40 hover:text-emerald-400"
+                    >
+                      <CreditCard className="h-3.5 w-3.5" />
+                    </button>
+                    <Link
+                      href={`/owner/stores/${s.id}`}
+                      title="Store details"
+                      className="rounded-md border border-zinc-800 p-1.5 text-zinc-400 transition-colors hover:border-yellow-500/40 hover:text-yellow-400"
+                    >
+                      <ArrowUpRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {enrichedStores.length === 0 && (
+              <p className="px-4 py-8 text-center text-sm text-zinc-600">
+                {search || statusFilter !== 'all' ? 'No stores match your filter.' : 'No stores yet.'}
+              </p>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -1058,7 +1198,7 @@ export default function OwnerDashboardPage() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-zinc-500 border-b border-zinc-800">
@@ -1105,6 +1245,35 @@ export default function OwnerDashboardPage() {
               </tbody>
             </table>
           </div>
+          <div className="md:hidden divide-y divide-zinc-900">
+            {filteredPayments.map((p) => (
+              <div key={p.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm text-white">{p.storeName}</p>
+                  <p className="text-xs text-zinc-500 capitalize">{p.plan} · {p.provider} · {timeAgo(p.created_at)}</p>
+                </div>
+                <div className="shrink-0 text-right space-y-1">
+                  <p className="text-sm font-semibold text-zinc-200">{p.currency} {p.amount}</p>
+                  <span
+                    className={`inline-block text-[11px] px-2 py-0.5 rounded-full border ${
+                      p.status === 'successful'
+                        ? 'bg-green-500/10 text-green-400 border-green-500/30'
+                        : p.status === 'failed'
+                        ? 'bg-red-500/10 text-red-400 border-red-500/30'
+                        : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30'
+                    }`}
+                  >
+                    {p.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+            {filteredPayments.length === 0 && (
+              <p className="px-4 py-8 text-center text-sm text-zinc-600">
+                {paymentStatusFilter !== 'all' ? 'No matching transactions.' : 'No transactions yet.'}
+              </p>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -1118,7 +1287,7 @@ export default function OwnerDashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-zinc-500 border-b border-zinc-800">
@@ -1141,6 +1310,17 @@ export default function OwnerDashboardPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+            <div className="md:hidden divide-y divide-zinc-900">
+              {recentRenewals.map((p) => (
+                <div key={p.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm text-white">{p.storeName}</p>
+                    <p className="text-xs text-zinc-500 capitalize">{p.plan} · {p.provider} · {timeAgo(p.created_at)}</p>
+                  </div>
+                  <p className="shrink-0 text-sm font-semibold text-green-400">{p.currency} {p.amount}</p>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
