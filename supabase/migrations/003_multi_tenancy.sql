@@ -165,17 +165,18 @@ CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
   new_store_id UUID;
 BEGIN
   -- Create a new store for this user
-  INSERT INTO stores (name, owner_email)
+  INSERT INTO public.stores (name, owner_email)
   VALUES (COALESCE(NEW.raw_user_meta_data->>'store_name', NEW.email), NEW.email)
   RETURNING id INTO new_store_id;
 
   -- Link the user to the store as admin
-  INSERT INTO store_members (store_id, user_id, role)
+  INSERT INTO public.store_members (store_id, user_id, role)
   VALUES (new_store_id, NEW.id, 'admin');
 
   RETURN NEW;
