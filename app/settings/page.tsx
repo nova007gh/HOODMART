@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { AuthGuard } from '@/components/auth-guard'
 import { DashboardLayout } from '@/components/layout'
+import { SMSReportSettings } from '@/components/sms-report-settings'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
@@ -143,6 +144,7 @@ export default function SettingsPage() {
   return (
     <AuthGuard>
       <DashboardLayout>
+        {userIsAdmin && <SMSReportSettings />}
         <form onSubmit={save} className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card className="glass-card">
             <CardHeader>

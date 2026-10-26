@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hoodmart-v2.2.0';
+const CACHE_NAME = 'hoodmart-v2.3.0';
 const urlsToCache = [
   '/',
   '/login',
@@ -30,15 +30,17 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
   const url = new URL(event.request.url);
+  // Subscription/auth responses must always come directly from the server.
+  if (url.origin !== self.location.origin) return;
   // Never cache API calls or Next.js internals
-  if (url.pathname.startsWith('/_next/') || url.pathname.startsWith('/api/')) {
+  if (url.pathname.startsWith('/_next/') || url.pathname.startsWith('/api/') || url.pathname === '/sw.js' || event.request.headers.get('RSC') === '1') {
     return;
   }
 
   // Network-first for navigation (page) requests — always get latest version
   if (event.request.mode === 'navigate' || event.request.destination === 'document') {
     event.respondWith(
-      fetch(event.request)
+      fetch(event.request, { cache: 'no-store' })
         .then((response) => {
           if (response && response.status === 200 && response.type === 'basic') {
             const responseToCache = response.clone();
@@ -84,15 +86,14 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
+          if (cacheName.startsWith('hoodmart-') && cacheName !== CACHE_NAME) {
             console.log('Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
-    })
+    }).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 self.addEventListener('sync', (event) => {

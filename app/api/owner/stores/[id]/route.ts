@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireOwner } from '@/lib/owner-auth'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { isStorePlan } from '@/lib/plans'
 
 const ALLOWED_STATUSES = ['trialing', 'active', 'past_due', 'expired', 'canceled']
 
@@ -48,7 +49,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
     updates.subscription_status = body.subscription_status
   }
-  if (body.plan !== undefined) updates.plan = body.plan
+  if (body.plan !== undefined) {
+    if (!isStorePlan(body.plan)) {
+      return NextResponse.json({ error: 'Choose a free trial or Pro (GHS 300/month)' }, { status: 400 })
+    }
+    updates.plan = body.plan
+  }
   if (body.trial_ends_at !== undefined) updates.trial_ends_at = body.trial_ends_at
   if (body.current_period_end !== undefined) updates.current_period_end = body.current_period_end
   if (body.extend_days !== undefined) {

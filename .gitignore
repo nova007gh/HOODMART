@@ -13,3 +13,5 @@ dist/
 *.tsbuildinfo
 ui-verify/
 manual-screenshots/
+backups/
+supabase/.temp/

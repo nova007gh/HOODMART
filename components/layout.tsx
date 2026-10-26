@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
@@ -8,6 +8,8 @@ import { hasPermission, isAdmin, PERMISSIONS } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
 import { SubscriptionGuard, SubscriptionBanner } from '@/components/subscription-guard'
 import { NotificationBell } from '@/components/notification-bell'
+import { MobileBottomNav } from '@/components/mobile-bottom-nav'
+import { KofiAIDialog } from '@/components/kofi-ai-dialog'
 import {
   Store,
   ShoppingCart,
@@ -45,11 +47,14 @@ const navigation = [
   { name: 'Discounts', href: '/discounts', icon: Tag, perm: PERMISSIONS.MANAGE_DISCOUNTS },
   { name: 'Reports', href: '/reports', icon: BarChart3, perm: PERMISSIONS.VIEW_REPORTS },
   { name: 'Intelligence', href: '/dashboard/assistant', icon: Brain, perm: null },
+  { name: 'Billing', href: '/billing', icon: CreditCard, perm: null },
   { name: 'Settings', href: '/settings', icon: Settings, perm: null },
 ]
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [assistantOpen, setAssistantOpen] = useState(false)
+  const closeAssistant = useCallback(() => setAssistantOpen(false), [])
   const pathname = usePathname()
   const router = useRouter()
   const { session, logout } = useAuth()
@@ -129,7 +134,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
-          {navigation.filter((item) => !item.perm || hasPermission(session?.user ?? null, item.perm)).map((item) => {
+          {navigation.filter((item) => (item.href !== '/billing' || isAdmin(session?.user ?? null)) && (!item.perm || hasPermission(session?.user ?? null, item.perm))).map((item) => {
             const Icon = item.icon
             const current = pathname === item.href
             return (
@@ -183,8 +188,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 min-w-0 flex flex-col min-h-screen">
-        <SubscriptionBanner />
+      <main className="flex-1 min-w-0 flex flex-col min-h-screen pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-0">
+        {session && <SubscriptionBanner canManageBilling={isAdmin(session.user)} />}
         {!isOnline && (
           <div className="bg-red-500/20 border-b border-red-500/30 text-red-300 text-xs text-center py-1.5 px-4 flex items-center justify-center gap-2">
             <WifiOff className="h-3.5 w-3.5 shrink-0" />
@@ -240,17 +245,22 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           <p>hoodmart@gmail.com</p>
         </footer>
       </main>
+      <MobileBottomNav assistantOpen={assistantOpen} onOpenAssistant={() => setAssistantOpen(open => !open)} />
+      {assistantOpen && <KofiAIDialog onClose={closeAssistant} />}
       {/* Floating Nova AI button — hidden on POS which has its own Sales AI */}
       {pathname !== '/pos' && (
-        <Link
-          href="/dashboard/assistant"
-          className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40"
+        <button
+          type="button"
+          onClick={() => setAssistantOpen(open => !open)}
+          aria-haspopup="dialog"
+          aria-expanded={assistantOpen}
+          className="fixed bottom-6 right-6 z-40 hidden lg:block"
         >
           <div className="group flex items-center gap-2 pl-3 pr-4 py-2 gold-gradient rounded-full shadow-lg hover:shadow-yellow-500/30 transition-all hover:scale-105 active:scale-95">
             <Brain className="h-4 w-4 text-black" />
             <span className="text-xs font-bold text-black whitespace-nowrap">Kofi AI</span>
           </div>
-        </Link>
+        </button>
       )}
     </div>
   )

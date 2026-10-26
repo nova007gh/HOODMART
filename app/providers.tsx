@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import * as sync from '@/lib/sync'
 import { getTheme, applyTheme } from '@/lib/theme'
+import { watchAppUpdates } from '@/lib/pwa-updates'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -26,12 +27,23 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch((err) => {
-        console.warn('Service worker registration failed:', err)
-      })
-    }
+    return watchAppUpdates(() => {
+      toast((t) => (
+        <div className="space-y-2 text-sm">
+          <p>A HOODMART update is ready. Finish your current work, then update the app.</p>
+          <div className="flex gap-3">
+            <button className="font-semibold underline" onClick={() => {
+              if (navigator.onLine) window.location.reload()
+              else toast.error('Reconnect before updating the app.')
+            }}>Update app</button>
+            <button className="text-zinc-400" onClick={() => toast.dismiss(t.id)}>Later</button>
+          </div>
+        </div>
+      ), { id: 'app-update', duration: Infinity })
+    })
+  }, [])
 
+  useEffect(() => {
     const onOnline = async () => {
       toast.success('Back online. Syncing...', { id: 'net-status' })
       await sync.syncNow()

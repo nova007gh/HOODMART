@@ -60,7 +60,7 @@ export default function StoreDetailPage() {
       setStore(data.store)
       setPayments(data.payments)
       setStatus(data.store.subscription_status)
-      setPlan(data.store.plan)
+      setPlan(data.store.plan === 'free' ? 'free' : 'pro')
     }
     setLoading(false)
   }
@@ -116,7 +116,7 @@ export default function StoreDetailPage() {
         method: 'POST',
         body: JSON.stringify({
           store_id: params.id,
-          plan,
+          plan: 'pro',
           provider: payProvider,
           amount: payAmount ? Number(payAmount) : undefined,
           status: 'successful',
@@ -212,7 +212,7 @@ export default function StoreDetailPage() {
                   type="number"
                   value={payAmount}
                   onChange={(e) => setPayAmount(e.target.value)}
-                  placeholder={String(PLAN_PRICE_GHS[plan as PlanKey] ?? 0)}
+                  placeholder={String(PLAN_PRICE_GHS.pro)}
                   className="bg-zinc-900 border-zinc-700 text-white w-28"
                 />
               </div>

@@ -13,6 +13,7 @@ import { notifications, emailAdmin } from '@/lib/notifications'
 import { Search, ShoppingCart, Plus, Minus, Trash2, CreditCard, Printer, X, Banknote, AlertTriangle, Image as ImageIcon, Calendar, Archive, FolderOpen, Building2, Mail, CheckCircle, Package, User, UserPlus, Users } from 'lucide-react'
 import { POSAIAssistant } from '@/components/pos-ai-assistant'
 import { CashierCard } from '@/components/cashier-card'
+import { CloseDaySales } from '@/components/close-day-sales'
 import { Pagination } from '@/components/pagination'
 import toast from 'react-hot-toast'
 
@@ -360,6 +361,7 @@ export default function POSPage() {
         <div className="space-y-4">
           {/* Who is selling right now */}
           <CashierCard refreshKey={salesTick} />
+          <CloseDaySales cartHasItems={cart.length > 0} />
 
           <div className="flex flex-col lg:flex-row gap-4">
           <div className="flex-1 min-w-0 space-y-4">

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { collectMobileMoney } from '@/lib/payments/eganow'
-import { PLAN_PRICE_GHS, PlanKey } from '@/lib/subscription'
+import { PLAN_PRICE_GHS, PlanKey, isPaidPlan } from '@/lib/plans'
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,10 +17,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const amount = PLAN_PRICE_GHS[plan]
-    if (!amount) {
+    if (!isPaidPlan(plan)) {
       return NextResponse.json({ error: 'Invalid plan' }, { status: 400 })
     }
+    const amount = PLAN_PRICE_GHS[plan]
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY

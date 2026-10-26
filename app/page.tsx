@@ -19,17 +19,12 @@ import {
   Zap,
 } from 'lucide-react'
 
-const BASIC_FEATURES = [
+const PRO_FEATURES = [
   'Point of Sale',
   'Inventory management',
   'Sales & analytics reports',
-  'Up to 2 employees',
   'AI business assistant',
   'Email support',
-]
-
-const PRO_FEATURES = [
-  'Everything in Basic',
   'Unlimited employees',
   'AI-powered sales insights & forecasting',
   'AI smart restock suggestions',
@@ -118,31 +113,12 @@ export default function LandingPage() {
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
               <h2 className="text-3xl sm:text-4xl font-bold mb-3">Simple, transparent pricing</h2>
-              <p className="text-zinc-400 text-lg">Choose the plan that fits your business. Start free for 14 days.</p>
+              <p className="text-zinc-400 text-lg">One complete plan for your business. Start free for 14 days.</p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-8 flex flex-col">
-                <p className="text-sm font-semibold text-zinc-400 uppercase tracking-wide mb-2">Basic</p>
-                <div className="flex items-baseline gap-1 mb-1">
-                  <span className="text-4xl font-extrabold text-white">GHS {PLAN_PRICE_GHS.basic}</span>
-                  <span className="text-zinc-500 text-sm">/month</span>
-                </div>
-                <p className="text-xs text-zinc-500 mb-6">Perfect for single-store retailers</p>
-                <ul className="space-y-3 flex-1 mb-8">
-                  {BASIC_FEATURES.map((f) => (
-                    <li key={f} className="flex items-center gap-2 text-sm text-zinc-300">
-                      <CheckCircle2 className="h-4 w-4 text-yellow-500 shrink-0" /> {f}
-                    </li>
-                  ))}
-                </ul>
-                <Button asChild className="w-full border-zinc-700 text-zinc-300 hover:bg-zinc-800" variant="outline">
-                  <Link href="/login?register=1">Start Free Trial</Link>
-                </Button>
-              </div>
-
+            <div className="max-w-lg mx-auto">
               <div className="rounded-2xl border-2 border-yellow-500/50 bg-zinc-950 p-8 flex flex-col relative">
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full gold-gradient text-black text-xs font-bold">
-                  Most Popular
+                  All-in-one Plan
                 </div>
                 <p className="text-sm font-semibold text-yellow-400 uppercase tracking-wide mb-2">Pro</p>
                 <div className="flex items-baseline gap-1 mb-1">

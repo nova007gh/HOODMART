@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireOwner } from '@/lib/owner-auth'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { PLAN_PRICE_GHS, isPaidPlan } from '@/lib/plans'
 
 export async function GET(req: NextRequest) {
   const auth = await requireOwner(req)
@@ -28,7 +29,6 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ payments: enriched })
 }
 
-const PLAN_PRICE_GHS: Record<string, number> = { basic: 150, pro: 300 }
 const ALLOWED_PAYMENT_STATUSES = ['pending', 'successful', 'failed']
 
 export async function POST(req: NextRequest) {
@@ -38,6 +38,9 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
   const storeId = String(body.store_id || '')
   const plan = String(body.plan || 'pro')
+  if (!isPaidPlan(plan)) {
+    return NextResponse.json({ error: 'Only the Pro plan (GHS 300/month) is available' }, { status: 400 })
+  }
   const provider = String(body.provider || 'manual')
   const status = ALLOWED_PAYMENT_STATUSES.includes(body.status) ? body.status : 'successful'
   const amount = Number.isFinite(Number(body.amount)) ? Number(body.amount) : (PLAN_PRICE_GHS[plan] ?? 0)

@@ -20,7 +20,7 @@ export interface LocalAIResult {
  * If the user asks "sold by who" after asking about yesterday's sales,
  * we prepend "yesterday" to the question so the date range is preserved.
  */
-function resolveWithContext(question: string, conversationId?: string): string {
+export function resolveWithContext(question: string, conversationId?: string): string {
   if (!conversationId || typeof window === 'undefined') return question
 
   // If the question already has a date keyword, no need to inherit

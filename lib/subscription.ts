@@ -1,23 +1,11 @@
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { getStoreId } from '@/lib/auth'
 
-export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'expired' | 'canceled'
+import type { SubscriptionInfo, SubscriptionStatus } from '@/lib/subscription-status'
+export type { SubscriptionInfo, SubscriptionStatus } from '@/lib/subscription-status'
 
-export interface SubscriptionInfo {
-  status: SubscriptionStatus
-  plan: string
-  trialEndsAt: string | null
-  currentPeriodEnd: string | null
-  isAllowed: boolean
-  daysRemaining: number | null
-}
-
-export const PLAN_PRICE_GHS = {
-  basic: 150,
-  pro: 300,
-} as const
-
-export type PlanKey = keyof typeof PLAN_PRICE_GHS
+export { PLAN_PRICE_GHS } from '@/lib/plans'
+export type { PlanKey } from '@/lib/plans'
 
 function daysUntil(dateStr: string | null): number | null {
   if (!dateStr) return null
@@ -53,6 +41,7 @@ export async function getSubscriptionInfo(): Promise<SubscriptionInfo> {
       currentPeriodEnd: null,
       isAllowed: true,
       daysRemaining: null,
+      loadError: true,
     }
   }
 
@@ -74,6 +63,7 @@ export async function getSubscriptionInfo(): Promise<SubscriptionInfo> {
         currentPeriodEnd: null,
         isAllowed: true,
         daysRemaining: null,
+        loadError: true,
       }
     }
 
@@ -110,6 +100,7 @@ export async function getSubscriptionInfo(): Promise<SubscriptionInfo> {
       currentPeriodEnd: null,
       isAllowed: true,
       daysRemaining: null,
+      loadError: true,
     }
   }
 }
