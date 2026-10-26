@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/hooks/useAuth'
 import { getPermissions, canAccessAI, AIPermission } from '@/lib/ai/permissions'
-import { processQuestion } from '@/lib/ai/engine'
+import { askAssistant } from '@/lib/ai/assistant-request'
 import { conversationStore, Conversation } from '@/lib/ai/conversation'
 import { getRemainingRequests } from '@/lib/ai/rate-limit'
 import { logAudit } from '@/lib/ai/audit'
@@ -44,6 +44,7 @@ const SUGGESTED_QUESTIONS: Array<{ q: string; perm: AIPermission }> = [
   { q: 'Who are my top customers?', perm: 'ai.view_customers' },
   { q: 'Who qualifies for a gift card?', perm: 'ai.view_customers' },
   { q: 'Which store is performing best?', perm: 'ai.view_staff' },
+  { q: 'Analyze all sales and salesperson activities', perm: 'ai.view_staff' },
   { q: "Give me today's business summary", perm: 'ai.view_profit' },
   { q: 'What should I focus on today?', perm: 'ai.view_profit' },
 ]
@@ -132,7 +133,7 @@ export default function AssistantPage() {
     setLoading(false)
   }
 
-  const handleSend = (questionText?: string) => {
+  const handleSend = async (questionText?: string) => {
     const q = (questionText || input).trim()
     if (!q || loading) return
     if (!session) return
@@ -172,13 +173,13 @@ export default function AssistantPage() {
     }])
 
     try {
-      const result = processQuestion(q, session.user, permissions, conv.id)
+      const result = await askAssistant(q, session.user, permissions, conv.id)
 
       if (abortRef.current) return
 
       setMessages((prev) => prev.map((m) =>
         m.id === assistantMsgId
-          ? { ...m, content: result.answer, loading: false, toolCalls: result.toolResults, dateRangeLabel: result.dateRangeLabel, model: 'local' }
+          ? { ...m, content: result.answer, loading: false, toolCalls: result.toolResults, dateRangeLabel: result.dateRangeLabel, model: result.model }
           : m
       ))
 
@@ -268,7 +269,7 @@ export default function AssistantPage() {
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-3 lg:gap-4 h-[calc(100vh-180px)] sm:h-[calc(100vh-220px)] min-h-[400px] sm:min-h-[500px]">
+        <div className="flex flex-col lg:flex-row gap-3 lg:gap-4 h-[60dvh] min-h-[320px] max-h-[650px]">
           {/* Mobile conversation toggle */}
           <Button
             onClick={() => setShowConvMobile(!showConvMobile)}
@@ -317,10 +318,10 @@ export default function AssistantPage() {
             </div>
 
           <div className="flex-1 flex flex-col min-w-0">
-            <Card className="flex-1 flex flex-col glass-card overflow-hidden">
+            <Card className="flex-1 flex flex-col border-yellow-500/20 bg-zinc-950/65 backdrop-blur-sm overflow-hidden min-h-0">
               <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
                 {messages.length === 0 && (
-                  <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                  <div className="flex flex-col items-center justify-center text-center py-4">
                     <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-full bg-yellow-500/10 flex items-center justify-center mb-3 sm:mb-4">
                       <Sparkles className="h-7 w-7 sm:h-8 sm:w-8 text-yellow-500" />
                     </div>

@@ -3,34 +3,66 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { getSubscriptionInfo, SubscriptionInfo } from '@/lib/subscription'
+import { getSubscriptionNotice } from '@/lib/subscription-status'
 import { Button } from '@/components/ui/button'
 import { Lock, Clock } from 'lucide-react'
 
 const EXEMPT_PATHS = ['/billing', '/login']
 
-export function SubscriptionBanner() {
+export function SubscriptionBanner({ canManageBilling = false }: { canManageBilling?: boolean }) {
   const [info, setInfo] = useState<SubscriptionInfo | null>(null)
   const router = useRouter()
 
   useEffect(() => {
-    getSubscriptionInfo().then(setInfo)
+    let active = true
+    let pending = false
+    const refresh = async () => {
+      if (pending) return
+      pending = true
+      try {
+        const next = await getSubscriptionInfo()
+        if (active) setInfo(next)
+      } finally {
+        pending = false
+      }
+    }
+    const refreshVisible = () => {
+      if (document.visibilityState === 'visible') void refresh()
+    }
+    void refresh()
+    const interval = window.setInterval(refreshVisible, 5 * 60 * 1000)
+    window.addEventListener('focus', refreshVisible)
+    window.addEventListener('online', refreshVisible)
+    document.addEventListener('visibilitychange', refreshVisible)
+    return () => {
+      active = false
+      window.clearInterval(interval)
+      window.removeEventListener('focus', refreshVisible)
+      window.removeEventListener('online', refreshVisible)
+      document.removeEventListener('visibilitychange', refreshVisible)
+    }
   }, [])
 
   if (!info) return null
-  if (info.status !== 'trialing') return null
-  if (info.daysRemaining === null || info.daysRemaining > 3) return null
+  const notice = getSubscriptionNotice(info)
+  if (!notice) return null
+  const toneClass = notice.tone === 'danger'
+    ? 'bg-red-500/10 border-red-500/30 text-red-300'
+    : notice.tone === 'warning'
+      ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400'
+      : 'bg-blue-500/10 border-blue-500/30 text-blue-300'
 
   return (
-    <div className="bg-yellow-500/10 border-b border-yellow-500/30 px-4 py-2 flex items-center justify-between gap-3 text-sm">
-      <div className="flex items-center gap-2 text-yellow-400">
-        <Clock className="h-4 w-4" />
-        {info.daysRemaining <= 0
-          ? 'Your free trial has ended.'
-          : `Your free trial ends in ${info.daysRemaining} day${info.daysRemaining === 1 ? '' : 's'}.`}
+    <div role="status" className={`border-b px-4 py-3 flex flex-wrap items-center justify-between gap-3 text-sm ${toneClass}`}>
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        <Clock className="h-4 w-4 shrink-0" />
+        <span>{notice.message}{!canManageBilling && notice.tone !== 'info' && ' Please contact your administrator about renewal.'}</span>
       </div>
-      <Button size="sm" className="gold-gradient text-black" onClick={() => router.push('/billing')}>
-        Upgrade Now
-      </Button>
+      {canManageBilling && (
+        <Button size="sm" className="gold-gradient text-black shrink-0" onClick={() => router.push('/billing')}>
+          {notice.action}
+        </Button>
+      )}
     </div>
   )
 }

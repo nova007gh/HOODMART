@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireOwner } from '@/lib/owner-auth'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
-import { PLAN_PRICE_GHS, PlanKey } from '@/lib/subscription'
+import { PLAN_PRICE_GHS, PlanKey } from '@/lib/plans'
 
 export async function GET(req: NextRequest) {
   const auth = await requireOwner(req)

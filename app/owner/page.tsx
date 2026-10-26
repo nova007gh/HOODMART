@@ -273,7 +273,7 @@ export default function OwnerDashboardPage() {
 
   // Plan distribution
   const planBreakdown = useMemo(() => {
-    const counts: Record<string, number> = { basic: 0, pro: 0, free: 0 }
+    const counts: Record<string, number> = { pro: 0, free: 0 }
     stores.forEach((s) => {
       const plan = s.plan || 'free'
       counts[plan] = (counts[plan] || 0) + 1
@@ -549,15 +549,8 @@ export default function OwnerDashboardPage() {
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between p-3 rounded-lg bg-zinc-900/60 border border-zinc-800">
               <div className="flex items-center gap-2">
-                <Zap className="h-4 w-4 text-yellow-500" />
-                <span className="text-sm text-zinc-300">Basic (GHS 150)</span>
-              </div>
-              <span className="text-lg font-bold text-white">{planBreakdown.basic || 0}</span>
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-lg bg-zinc-900/60 border border-zinc-800">
-              <div className="flex items-center gap-2">
                 <Crown className="h-4 w-4 text-yellow-500" />
-                <span className="text-sm text-zinc-300">Pro (GHS 300)</span>
+                <span className="text-sm text-zinc-300">Pro (GHS {PLAN_PRICE_GHS.pro})</span>
               </div>
               <span className="text-lg font-bold text-white">{planBreakdown.pro || 0}</span>
             </div>
@@ -1487,17 +1480,12 @@ function RenewModal({
   onClose: () => void
   onDone: (msg: string) => void
 }) {
-  const [plan, setPlan] = useState<PlanKey>(store.plan === 'basic' ? 'basic' : 'pro')
+  const plan: PlanKey = 'pro'
   const [days, setDays] = useState('30')
-  const [amount, setAmount] = useState(String(PLAN_PRICE_GHS[store.plan === 'basic' ? 'basic' : 'pro']))
+  const [amount, setAmount] = useState(String(PLAN_PRICE_GHS.pro))
   const [provider, setProvider] = useState('manual')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  function changePlan(p: PlanKey) {
-    setPlan(p)
-    setAmount(String(PLAN_PRICE_GHS[p]))
-  }
 
   async function submit() {
     setBusy(true)
@@ -1526,21 +1514,9 @@ function RenewModal({
 
   return (
     <ModalShell icon={CreditCard} title={`Renew subscription — ${store.name}`} onClose={onClose}>
-      <div className="grid grid-cols-2 gap-3">
-        {(Object.keys(PLAN_PRICE_GHS) as PlanKey[]).map((p) => (
-          <button
-            key={p}
-            onClick={() => changePlan(p)}
-            className={`rounded-lg border p-3 text-left transition-colors ${
-              plan === p
-                ? 'border-yellow-500/50 bg-yellow-500/10'
-                : 'border-zinc-800 bg-zinc-900 hover:border-zinc-700'
-            }`}
-          >
-            <p className="text-sm font-semibold text-white capitalize">{p}</p>
-            <p className="text-xs text-zinc-500">GHS {PLAN_PRICE_GHS[p]}/mo</p>
-          </button>
-        ))}
+      <div className="rounded-lg border border-yellow-500/50 bg-yellow-500/10 p-3">
+        <p className="text-sm font-semibold text-white">Pro</p>
+        <p className="text-xs text-zinc-500">GHS {PLAN_PRICE_GHS.pro}/month</p>
       </div>
       <div className="grid grid-cols-3 gap-3">
         <div className="space-y-1">
@@ -1681,8 +1657,7 @@ function AddStoreModal({ onClose, onDone }: { onClose: () => void; onDone: (msg:
               <label className="text-xs text-zinc-500">Plan</label>
               <select value={plan} onChange={(e) => setPlan(e.target.value)} className="w-full h-9 rounded-md border border-zinc-700 bg-zinc-900 text-white px-2 text-sm">
                 <option value="free">free</option>
-                <option value="basic">basic (GHS 150)</option>
-                <option value="pro">pro (GHS 300)</option>
+                <option value="pro">pro (GHS {PLAN_PRICE_GHS.pro})</option>
               </select>
             </div>
             <div className="space-y-1">

@@ -1,74 +1,15 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { store, money, Sale } from '@/lib/store'
 import { getSession } from '@/lib/auth'
+import { askAssistant } from '@/lib/ai/assistant-request'
+import { getPermissions } from '@/lib/ai/permissions'
 import { Brain, Send, X, Loader2, Sparkles } from 'lucide-react'
 
 interface ChatMsg {
   role: 'user' | 'assistant'
   content: string
   loading?: boolean
-}
-
-function getTodaySales(): Sale[] {
-  const today = new Date().toISOString().slice(0, 10)
-  return store.getSales().filter((s) => s.timestamp.startsWith(today))
-}
-
-function answerQuestion(q: string): string {
-  const lower = q.toLowerCase()
-  const sales = getTodaySales()
-  const session = getSession()
-  const user = session?.user
-
-  if (sales.length === 0) {
-    return 'No sales have been recorded today yet. Start selling to see your daily activity here!'
-  }
-
-  const totalRevenue = sales.reduce((sum, s) => sum + s.total, 0)
-  const totalItems = sales.reduce((sum, s) => sum + s.items.reduce((a, i) => a + i.qty, 0), 0)
-  const avgOrder = sales.length ? totalRevenue / sales.length : 0
-
-  if (lower.includes('my sales') || lower.includes('my activity') || (lower.includes('how many') && lower.includes('sale'))) {
-    if (user && user.email) {
-      const mySales = sales.filter((s) => s.userEmail === user.email)
-      const myRevenue = mySales.reduce((sum, s) => sum + s.total, 0)
-      const myItems = mySales.reduce((sum, s) => sum + s.items.reduce((a, i) => a + i.qty, 0), 0)
-      return `**Your Sales Today**\n\n- Transactions: ${mySales.length}\n- Items sold: ${myItems}\n- Revenue: ${money(myRevenue)}\n- Average order: ${money(mySales.length ? myRevenue / mySales.length : 0)}`
-    }
-  }
-
-  if (lower.includes('summary') || lower.includes('overview') || lower.includes('how am i doing') || lower.includes('today')) {
-    return `**Today's Sales Summary**\n\n- Total transactions: ${sales.length}\n- Items sold: ${totalItems}\n- Total revenue: ${money(totalRevenue)}\n- Average order value: ${money(avgOrder)}\n\n${user ? `You have processed ${sales.filter((s) => s.userEmail === user.email).length} sale(s) today.` : ''}`
-  }
-
-  if (lower.includes('top') || lower.includes('best') || lower.includes('popular')) {
-    const map = new Map<string, { name: string; qty: number; total: number }>()
-    sales.forEach((s) => s.items.forEach((i) => {
-      const cur = map.get(i.id) || { name: i.name, qty: 0, total: 0 }
-      cur.qty += i.qty
-      cur.total += i.price * i.qty
-      map.set(i.id, cur)
-    }))
-    const top = Array.from(map.values()).sort((a, b) => b.qty - a.qty).slice(0, 5)
-    if (top.length === 0) return 'No items sold today yet.'
-    return `**Top Selling Items Today**\n\n${top.map((t, i) => `${i + 1}. ${t.name} — ${t.qty} units (${money(t.total)})`).join('\n')}`
-  }
-
-  if (lower.includes('payment') || lower.includes('cash') || lower.includes('card') || lower.includes('mobile')) {
-    const cash = sales.filter((s) => s.paymentMethod === 'cash')
-    const card = sales.filter((s) => s.paymentMethod === 'card')
-    const mobile = sales.filter((s) => s.paymentMethod === 'mobile')
-    return `**Payment Methods Today**\n\n- Cash: ${cash.length} transactions (${money(cash.reduce((s, x) => s + x.total, 0))})\n- Card: ${card.length} transactions (${money(card.reduce((s, x) => s + x.total, 0))})\n- Mobile Money: ${mobile.length} transactions (${money(mobile.reduce((s, x) => s + x.total, 0))})`
-  }
-
-  if (lower.includes('last') || lower.includes('recent')) {
-    const recent = sales.slice(-5).reverse()
-    return `**Recent Sales Today**\n\n${recent.map((s, i) => `${i + 1}. ${new Date(s.timestamp).toLocaleTimeString()} — ${s.items.length} item(s) — ${money(s.total)} (${s.paymentMethod})`).join('\n')}`
-  }
-
-  return `**Today's Sales Activity**\n\n- Total transactions: ${sales.length}\n- Items sold: ${totalItems}\n- Total revenue: ${money(totalRevenue)}\n- Average order: ${money(avgOrder)}\n\nAsk me about: my sales, top items, payments, recent sales, or today's summary.`
 }
 
 const SUGGESTED = [
@@ -90,25 +31,31 @@ export function POSAIAssistant() {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const send = (text?: string) => {
+  const send = async (text?: string) => {
     const q = (text || input).trim()
     if (!q || loading) return
     setInput('')
     setLoading(true)
     setMessages((prev) => [...prev, { role: 'user', content: q }, { role: 'assistant', content: '', loading: true }])
 
-    setTimeout(() => {
-      const answer = answerQuestion(q)
+    try {
+      const user = getSession()?.user
+      if (!user) throw new Error('Please sign in again.')
+      const { answer } = await askAssistant(q, user, getPermissions(user.role))
       setMessages((prev) => prev.map((m, i) => i === prev.length - 1 ? { ...m, content: answer, loading: false } : m))
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not verify sales. Please try again.'
+      setMessages((prev) => prev.map((m, i) => i === prev.length - 1 ? { ...m, content: message, loading: false } : m))
+    } finally {
       setLoading(false)
-    }, 400)
+    }
   }
 
   if (!open) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-40 group flex items-center gap-2 pl-3 pr-4 py-2 gold-gradient rounded-full shadow-lg hover:shadow-yellow-500/30 transition-all hover:scale-105 active:scale-95"
+        className="no-print fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] right-4 lg:bottom-6 lg:right-6 z-40 group flex items-center gap-2 pl-3 pr-4 py-2 gold-gradient rounded-full shadow-lg hover:shadow-yellow-500/30 transition-all hover:scale-105 active:scale-95"
       >
         <Brain className="h-4 w-4 text-black" />
         <span className="text-xs font-bold text-black whitespace-nowrap">Sales AI</span>
@@ -117,8 +64,8 @@ export function POSAIAssistant() {
   }
 
   return (
-    <div className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-50 w-[calc(100vw-2rem)] max-w-sm">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl flex flex-col max-h-[70vh] overflow-hidden">
+    <div className="no-print fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] right-4 lg:bottom-6 lg:right-6 z-50 w-[calc(100vw-2rem)] max-w-sm">
+      <div className="bg-zinc-950/65 backdrop-blur-sm border border-yellow-500/25 rounded-2xl shadow-2xl flex flex-col max-h-[min(50dvh,400px)] overflow-hidden">
         <div className="flex items-center justify-between p-3 border-b border-zinc-800 shrink-0">
           <div className="flex items-center gap-2">
             <Brain className="h-4 w-4 text-yellow-500" />

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AuthGuard } from '@/components/auth-guard'
 import { DashboardLayout } from '@/components/layout'
+import { CloseDaySales } from '@/components/close-day-sales'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -184,6 +185,7 @@ export default function SalesPage() {
   return (
     <AuthGuard>
       <DashboardLayout>
+        <div className="mb-4"><CloseDaySales /></div>
         <div className="space-y-6">
           {/* Date filter buttons + custom date picker */}
           <div className="flex flex-wrap items-center gap-2">

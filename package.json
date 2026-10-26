@@ -9,6 +9,8 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
+    "test:subscription": "node --test tests/subscription-status.test.cjs",
+    "test": "node --test tests/*.test.cjs",
     "db:push": "supabase db push",
     "db:reset": "supabase db reset",
     "generate": "supabase gen types typescript --local > lib/database.types.ts",

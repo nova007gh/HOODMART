@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireOwner } from '@/lib/owner-auth'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { isStorePlan } from '@/lib/plans'
 
 export async function GET(req: NextRequest) {
   const auth = await requireOwner(req)
@@ -41,8 +42,6 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ stores: enriched })
 }
 
-const PLANS = ['free', 'basic', 'pro']
-
 export async function POST(req: NextRequest) {
   const auth = await requireOwner(req)
   if (!auth.ok) return auth.response
@@ -50,7 +49,10 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
   const name = String(body.name || '').trim()
   const email = String(body.owner_email || '').trim().toLowerCase()
-  const plan = PLANS.includes(body.plan) ? body.plan : 'free'
+  const plan = body.plan ?? 'free'
+  if (!isStorePlan(plan)) {
+    return NextResponse.json({ error: 'Choose a free trial or Pro (GHS 300/month)' }, { status: 400 })
+  }
   const trialDays = Number.isFinite(Number(body.trial_days)) ? Math.max(0, Number(body.trial_days)) : 14
   const password = body.password ? String(body.password) : `Hood-${Math.random().toString(36).slice(2, 10)}`
 
